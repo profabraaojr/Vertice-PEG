@@ -1,0 +1,20 @@
+{
+  "name": "VÉRTICE PEG — Operações Táticas",
+  "short_name": "VÉRTICE",
+  "description": "FPS tático em homenagem aos alunos da Escola Estadual Cívico Militar Joaquim Nunes Rocha (1º, 2º e 3º ano PEG).",
+  "lang": "pt-BR",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#0d0f12",
+  "theme_color": "#0d0f12",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

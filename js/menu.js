@@ -3,6 +3,7 @@ import { settings, saveSettings, resetSettings } from './settings.js';
 import { WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS, MODE_INFO, weaponStats, TEAMS } from './config.js';
 import { EMBEDDED, BLOCKED_MSG } from './net.js';
 import { MAPS, MAP_IDS } from './map.js';
+import { pwa, isStandalone, platform, promptInstall } from './pwa.js';
 import { STUDENTS, SCHOOL, CLASSES, SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, getLook, setLook, defaultLook, activeProfile, activeLook, setActiveProfile, camoCanvas, lookColors } from './profiles.js';
 
 const $ = (id) => document.getElementById(id);
@@ -26,6 +27,7 @@ export class Menu {
     });
     this.initPlay();
     this.initProfiles();
+    this.initInstall();
     this.initCoop();
     this.initSettings();
     this.buildLoadout();
@@ -61,6 +63,7 @@ export class Menu {
     switch (a) {
       case 'play': this.show('screen-play'); break;
       case 'profile': this.openProfiles(); break;
+      case 'install': this.openInstall(); break;
       case 'coop': this.openCoop(); break;
       case 'quick-training': app.startMatch({ map: settings.match.map, mode: 'training', bots: 6, difficulty: settings.match.difficulty, botsShoot: true, timeLimit: 0, scoreLimit: 0, rounds: 0 }); break;
       case 'loadout': this.openLoadout('main'); break;
@@ -285,6 +288,7 @@ export class Menu {
       ['set-sfx', 'out-sfx', 'sfx', pct],
       ['set-music', 'out-music', 'music', pct],
       ['set-sens', 'out-sens', 'sensitivity', (v) => v.toFixed(2)],
+      ['set-touch', 'out-touch', 'touchSens', (v) => v.toFixed(2)],
       ['set-scope', 'out-scope', 'scopeSens', (v) => v.toFixed(2)],
     ];
     for (const [id, out, key, fmt] of this.ranges) {
@@ -311,6 +315,37 @@ export class Menu {
     for (const [id, key] of this.checks) $(id).checked = !!settings[key];
     $('set-quality').value = settings.quality;
     $('set-ch-color').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.v === settings.crosshairColor));
+  }
+
+  // ---------- instalação ----------
+  initInstall() {
+    const refresh = () => {
+      const standalone = isStandalone();
+      $('btn-install').classList.toggle('hidden', standalone);
+      const btn = $('install-now');
+      btn.disabled = !pwa.prompt;
+      btn.textContent = pwa.prompt ? 'Instalar agora' : pwa.installed ? 'Instalado' : 'Use o menu do navegador';
+    };
+    pwa.onChange = refresh;
+    $('install-now').addEventListener('click', async () => {
+      const r = await promptInstall();
+      if (r === 'accepted') this.app.toast('Instalando o VÉRTICE…');
+      refresh();
+    });
+    $('install-url').textContent = location.href.split('?')[0].split('#')[0];
+    if (this.app.touch) $('main-foot').textContent = 'Toque em Jogar para entrar em tela cheia · use os controles na tela';
+    refresh();
+  }
+
+  openInstall() {
+    const pf = platform();
+    ['android', 'ios', 'desktop'].forEach((k) => $(`install-${k}`).classList.toggle('current', k === pf));
+    // mostra primeiro as instruções do aparelho atual
+    const box = $(`install-${pf}`);
+    box.parentNode.insertBefore(box, box.parentNode.querySelector('.install-box'));
+    if (pwa.prompt) $('install-desktop').appendChild($('install-now'));
+    if (pf === 'android' || !pwa.prompt) $('install-android').appendChild($('install-now'));
+    this.show('screen-install');
   }
 
   // ---------- perfis ----------

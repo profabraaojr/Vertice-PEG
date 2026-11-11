@@ -82,10 +82,16 @@ export class Player extends Combatant {
     this.height = lerp(STAND_H, CROUCH_H, this.crouchT);
 
     // ---- deslocamento ----
-    let fwd = 0, str = 0;
+    let fwd = 0, str = 0, analog = 1;
     if (canMove) {
       fwd = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
       str = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
+      // joystick virtual (toque): direção e intensidade analógicas
+      const st = input.stick;
+      if (st && (st.x || st.y)) {
+        fwd = st.y; str = st.x;
+        analog = Math.min(1, Math.hypot(st.x, st.y) * 1.15);
+      }
     }
     const firing = (input.mouse.left || input.mouse.leftPressed || (def.melee && input.mouse.right)) && canShoot;
     this.sprinting = canMove && input.down('ShiftLeft') && fwd > 0 && !this.crouching && !firing && this.ads < 0.2 && this.zoomLevel === 0;
@@ -93,6 +99,7 @@ export class Player extends Combatant {
     let maxSpeed = this.crouching ? CROUCH : this.sprinting ? SPRINT : WALK;
     maxSpeed *= def.speed;
     if (this.ads > 0.5 || this.zoomLevel > 0) maxSpeed *= 0.62;
+    maxSpeed *= analog;
 
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
     let wx = -sy * fwd + cy * str;

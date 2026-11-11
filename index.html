@@ -2,7 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f12">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VÉRTICE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <title>VÉRTICEBLOX — Assalto Tático</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -76,8 +84,9 @@
           <button class="btn big" data-action="loadout">Arsenal</button>
           <button class="btn big" data-action="settings">Configurações</button>
           <button class="btn big" data-action="controls">Controles</button>
+          <button class="btn big" data-action="install" id="btn-install">Instalar no celular</button>
         </nav>
-        <p class="foot">Clique em jogar para capturar o mouse · Esc libera o cursor e pausa</p>
+        <p class="foot" id="main-foot">Clique em jogar para capturar o mouse · Esc libera o cursor e pausa</p>
       </div>
     </section>
 
@@ -175,6 +184,33 @@
       </div>
     </section>
 
+    <!-- instalação -->
+    <section class="screen" id="screen-install">
+      <div class="panel">
+        <header class="panel-head"><h2>Instalar no celular</h2><p>O VÉRTICE pode ser instalado como aplicativo: ganha ícone na tela inicial, abre em tela cheia, na horizontal, e funciona sem internet depois da primeira abertura (exceto o cooperativo).</p></header>
+        <div class="install-box" id="install-android">
+          <h4>Android</h4>
+          <p>Toque em <b>Instalar agora</b>. Se o botão não responder, abra o menu do navegador (⋮) e escolha <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</p>
+          <button class="btn primary" id="install-now">Instalar agora</button>
+        </div>
+        <div class="install-box" id="install-ios">
+          <h4>iPhone e iPad</h4>
+          <ol>
+            <li>Abra este endereço no <b>Safari</b>.</li>
+            <li>Toque em <b>Compartilhar</b> (o quadrado com a seta para cima).</li>
+            <li>Escolha <b>Adicionar à Tela de Início</b> e confirme.</li>
+          </ol>
+          <p class="install-note">No iPhone, o Safari só abre o jogo em tela cheia depois de instalado.</p>
+        </div>
+        <div class="install-box" id="install-desktop">
+          <h4>Computador</h4>
+          <p>No Chrome ou no Edge, clique no ícone de instalar na barra de endereço, ou use o botão abaixo quando ele estiver disponível.</p>
+        </div>
+        <p class="install-link">Endereço para abrir no celular: <b id="install-url"></b></p>
+        <footer class="panel-foot"><div class="grow"></div><button class="btn primary" data-action="back">Voltar</button></footer>
+      </div>
+    </section>
+
     <!-- perfis -->
     <section class="screen" id="screen-profile">
       <div class="panel wide">
@@ -258,6 +294,7 @@
         <div class="tab-body" data-tab="input">
           <label class="opt"><span>Sensibilidade do mouse <output id="out-sens"></output></span><input type="range" id="set-sens" min="0.1" max="4" step="0.05"></label>
           <label class="opt"><span>Sensibilidade com luneta <output id="out-scope"></output></span><input type="range" id="set-scope" min="0.2" max="2" step="0.05"></label>
+          <label class="opt"><span>Sensibilidade do toque <output id="out-touch"></output></span><input type="range" id="set-touch" min="0.3" max="3" step="0.05"></label>
           <label class="opt check"><input type="checkbox" id="set-invert"><span>Inverter eixo vertical</span></label>
         </div>
         <div class="tab-body" data-tab="ui">
@@ -297,6 +334,11 @@
           <tr><td><kbd>B</kbd></td><td>Seleção de armas</td></tr>
           <tr><td><kbd>Tab</kbd></td><td>Placar</td></tr>
           <tr><td><kbd>Esc</kbd></td><td>Pausa</td></tr>
+          <tr class="keys-head"><td colspan="2">No celular e no tablet</td></tr>
+          <tr><td>Polegar esquerdo</td><td>Joystick: andar. Empurrado até a borda para a frente: correr</td></tr>
+          <tr><td>Arrastar à direita</td><td>Mirar (também funciona arrastando sobre o botão FOGO)</td></tr>
+          <tr><td>Botões à direita</td><td>Fogo, mira, pular, agachar, recarregar e trocar arma</td></tr>
+          <tr><td>Botões no topo</td><td>Visão noturna, armas, placar, tela cheia e pausa</td></tr>
         </table>
         <footer class="panel-foot"><div class="grow"></div><button class="btn primary" data-action="back">Voltar</button></footer>
       </div>
@@ -333,6 +375,7 @@
   </div>
 
   <div id="toast"></div>
+  <div id="rotate-hint"><div class="rh-phone"></div><p>Gire o aparelho para a horizontal</p></div>
   <div id="loading"><div class="ld-mark"></div><p>Montando o Distrito Ferrugem…</p></div>
   <noscript><p class="noscript">Este jogo requer JavaScript habilitado.</p></noscript>
 </div>

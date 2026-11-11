@@ -1,6 +1,8 @@
 // Ponto de entrada: renderizador, laço principal e transições entre menu e partida.
 import * as THREE from 'three';
-import { settings, QUALITY } from './settings.js';
+import { settings, QUALITY, saveSettings } from './settings.js';
+import { TouchControls, isTouchDevice } from './touch.js';
+import { setupPWA } from './pwa.js';
 import { buildMap, MAPS } from './map.js';
 import { World } from './physics.js';
 import { Nav } from './nav.js';
@@ -21,6 +23,19 @@ class App {
     const canvas = document.getElementById('game');
     this.canvas = canvas;
     this.noLock = new URLSearchParams(location.search).has('nolock');
+    // celulares e tablets: sem captura de mouse, com controles na tela
+    this.touch = isTouchDevice() || new URLSearchParams(location.search).has('touch');
+    if (this.touch) {
+      this.noLock = true;
+      document.body.classList.add('touch');
+      if (!settings.touchDefaults) {
+        // primeira abertura no celular: qualidade mais leve para manter a fluidez
+        settings.quality = 'media';
+        settings.renderScale = 0.75;
+        settings.touchDefaults = true;
+        saveSettings();
+      }
+    }
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -61,6 +76,7 @@ class App {
       else this.menu.coopStatus('A conexão com o anfitrião foi encerrada.', true);
     };
     this.menu = new Menu(this);
+    this.touchUI = this.touch ? new TouchControls(this) : null;
     this.state = 'menu';
     this.menuT = 0;
     this.suppressPause = false;
@@ -271,13 +287,44 @@ class App {
     else this.pause('A partida cooperativa começou! Clique em Continuar para entrar.');
   }
 
+  // ---------- tela cheia ----------
+  // Precisa partir de um toque ou clique; no iPhone o Safari não oferece tela cheia para páginas
+  // (o app instalado na Tela de Início já abre em tela cheia).
+  enterFullscreen() {
+    const doc = document;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) return;
+    const el = doc.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) return;
+    const lock = () => {
+      try {
+        const o = screen.orientation;
+        if (o && o.lock) o.lock('landscape').catch(() => {});
+      } catch (e) { /* orientação livre */ }
+    };
+    try {
+      const p = req.call(el, { navigationUI: 'hide' });
+      if (p && p.then) p.then(lock).catch(() => {}); else lock();
+    } catch (e) { /* navegador recusou */ }
+  }
+
+  toggleFullscreen() {
+    const doc = document;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+      const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+      if (exit) try { exit.call(doc); } catch (e) { /* já saiu */ }
+    } else this.enterFullscreen();
+  }
+
   // ---------- transições ----------
   lockPointer() {
+    if (this.touchUI) { this.touchUI.show(true); this.enterFullscreen(); }
     if (this.noLock) { this.input.locked = true; return; }
     this.input.requestLock();
   }
 
   releasePointer() {
+    if (this.touchUI) this.touchUI.show(false);
     if (this.noLock) { this.input.locked = false; return; }
     if (document.pointerLockElement) {
       this.suppressPause = true;
@@ -364,7 +411,9 @@ class App {
     if (dt > 0.05) dt = 0.05;
     if (dt < 0) dt = 0;
 
+    document.body.classList.toggle('ingame', this.state === 'playing');
     if (this.state === 'playing') {
+      if (this.touchUI && this.game.active) this.touchUI.sync(this.game);
       this.game.inputBlocked = false;
       if (this.input.justPressed('KeyX') && this.map.night && this.game.player && this.game.player.alive) this.setNightVision(!this.nv);
       if (this.input.justPressed('KeyB')) this.openIngameLoadout();
@@ -403,6 +452,8 @@ class App {
     }
   }
 }
+
+setupPWA();
 
 try {
   new App();

@@ -8,6 +8,26 @@ O jogo está publicado no GitHub Pages: **https://profabraaojr.github.io/Vertice
 
 Nesse endereço tudo funciona, inclusive o modo cooperativo. Não é preciso instalar nada: basta abrir o link no Chrome, Edge ou Firefox de um computador com teclado e mouse.
 
+### Celular e tablet
+
+No celular, o jogo detecta a tela de toque e mostra controles na tela:
+
+- **polegar esquerdo:** joystick que aparece onde você toca. Empurrado até a borda para a frente, corre;
+- **arrastar na metade direita:** mira (também funciona arrastando sobre o botão FOGO);
+- **botões à direita:** fogo, mira de precisão (luneta ou golpe pesado, conforme a arma), pular, agachar, recarregar e trocar arma. Há um segundo botão de fogo à esquerda;
+- **botões no topo:** visão noturna (no mapa noturno), armas, placar, tela cheia e pausa.
+
+Ao tocar em Jogar, o jogo entra em tela cheia e trava na horizontal (Android). Se o aparelho estiver na vertical, aparece um aviso para girá-lo. Na primeira abertura no celular, a qualidade gráfica começa em Média para manter a fluidez; a sensibilidade do toque pode ser ajustada em Configurações → Controles.
+
+### Instalar como aplicativo (iOS e Android)
+
+O jogo é um aplicativo web instalável (PWA): ganha ícone na tela inicial, abre em tela cheia na horizontal e funciona sem internet depois da primeira abertura (o cooperativo precisa de internet).
+
+- **Android (Chrome, Edge, Samsung Internet):** menu **Instalar no celular → Instalar agora**, ou no menu do navegador (⋮) → **Instalar app**.
+- **iPhone e iPad:** abra o link no **Safari** → **Compartilhar** → **Adicionar à Tela de Início**. No iPhone, a tela cheia só existe com o app instalado, porque o Safari não a oferece para páginas.
+
+Publicar nas lojas (Google Play e App Store) é possível a partir desta mesma versão, empacotando o aplicativo web, mas exige contas de desenvolvedor pagas e revisão das lojas.
+
 ### Atualizar o jogo publicado
 
 Envie as alterações para a branch `main`. O fluxo `.github/workflows/publicar.yml` copia a `main` para a branch `gh-pages`, de onde o GitHub Pages publica o site. A nova versão aparece no endereço em um ou dois minutos. Se o navegador ainda mostrar a versão antiga, recarregue com Ctrl+F5.
@@ -137,6 +157,10 @@ js/guns.js          modelos detalhados das armas (perfis extrudados, materiais, 
 js/preview.js       prévia 3D das armas no arsenal
 js/models.js        modelos dos personagens (rosto, olhos, cabelo, farda)
 js/profiles.js      perfis dos alunos, opções de aparência e camuflagens
+js/touch.js         controles de toque (joystick, mira por arraste, botões)
+js/pwa.js           instalação como aplicativo e registro do service worker
+sw.js               service worker (cache para abrir sem internet)
+manifest.webmanifest  dados do aplicativo instalável (nome, ícones, tela cheia)
 js/viewmodel.js     arma em primeira pessoa e animações
 js/effects.js       partículas, traçantes, marcas de bala, clarões
 js/hud.js           interface durante a partida e radar
