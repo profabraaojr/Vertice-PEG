@@ -241,6 +241,100 @@ function floorLetter(letter, color) {
   return t;
 }
 
+
+// ---------- mural de homenagem à turma ----------
+export const MURAL_URL = 'assets/mural-turma.jpg';
+
+function plaqueTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 170;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 170);
+  g.addColorStop(0, '#2b2418'); g.addColorStop(1, '#1a150e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1024, 170);
+  ctx.strokeStyle = '#c9a25a';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(8, 8, 1008, 154);
+  ctx.textAlign = 'center';
+  // reduz a fonte até o texto caber na placa
+  const fit = (text, weight, size, y, color) => {
+    let px = size;
+    do { ctx.font = `${weight} ${px}px "Chakra Petch", "Arial Narrow", sans-serif`; px -= 2; } while (ctx.measureText(text).width > 940 && px > 14);
+    ctx.fillStyle = color;
+    ctx.fillText(text, 512, y);
+  };
+  fit('HOMENAGEM À TURMA PEG · 1º, 2º E 3º ANO', 'bold', 50, 74, '#e8d29a');
+  fit('Escola Estadual Cívico Militar Joaquim Nunes Rocha', '600', 34, 130, '#d8d2c2');
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// Trechos de parede com duas células seguidas e espaço livre à frente (para ver o mural de perto).
+function muralSpots(avoid) {
+  const open = (x, y) => { const ch = charAt(x, y); return ch === '.' || ch === ',' || ch === 'A' || ch === 'Z'; };
+  const spots = [];
+  // [dx, dy] da frente; [ax, ay] do vizinho ao longo da parede
+  const dirs = [[0, 1, 1, 0], [0, -1, 1, 0], [1, 0, 0, 1], [-1, 0, 0, 1]];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    for (const [dx, dy, ax, ay] of dirs) {
+      if (charAt(x, y) !== '#' || charAt(x + ax, y + ay) !== '#') continue;
+      let ok = true;
+      for (const [cx, cy] of [[x, y], [x + ax, y + ay]]) {
+        for (let d = 1; d <= 3; d++) if (!open(cx + dx * d, cy + dy * d)) ok = false;
+      }
+      if (!ok) continue;
+      // centro da face entre as duas células
+      const fx = dx ? (dx > 0 ? (x + 1) * CELL - HALF : x * CELL - HALF) : (x + 1) * CELL - HALF;
+      const fz = dy ? (dy > 0 ? (y + 1) * CELL - HALF : y * CELL - HALF) : (y + 1) * CELL - HALF;
+      if (avoid.some((a) => Math.hypot(a.x - fx, a.z - fz) < 4)) continue;
+      spots.push({ x: fx, z: fz, nx: dx, nz: dy });
+    }
+  }
+  return spots;
+}
+
+function addMural(root, avoid, seed = Math.random()) {
+  const spots = muralSpots(avoid);
+  if (!spots.length) return null;
+  const sp = spots[Math.min(spots.length - 1, Math.floor(seed * spots.length))];
+  const g = new THREE.Group();
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x3a2c1c, roughness: 0.7, metalness: 0.1 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xb8913a, roughness: 0.35, metalness: 0.8 });
+  // moldura, filete dourado, foto e placa
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(2.7, 4.05, 0.08), frameMat);
+  frame.position.set(0, 2.68, 0.04);
+  g.add(frame);
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3.45, 0.02), trimMat);
+  trim.position.set(0, 2.98, 0.085);
+  g.add(trim);
+  const tex = new THREE.TextureLoader().load(MURAL_URL);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.magFilter = THREE.NearestFilter; // mantém os blocos do efeito pixel nítidos (a foto é anonimizada)
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
+  // leve brilho próprio para a foto continuar visível no mapa noturno
+  const photoMat = new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.28, roughness: 0.85 });
+  const photo = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 3.2), photoMat);
+  photo.position.set(0, 2.98, 0.1);
+  g.add(photo);
+  const plaqueTex = plaqueTexture();
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.4), new THREE.MeshStandardMaterial({ map: plaqueTex, emissive: 0xffffff, emissiveMap: plaqueTex, emissiveIntensity: 0.2, roughness: 0.6 }));
+  plaque.position.set(0, 1.03, 0.09);
+  g.add(plaque);
+  // luminária sobre o mural
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.07, 0.22), new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xfff0cc, emissiveIntensity: 1.6 }));
+  lamp.position.set(0, 4.82, 0.2);
+  g.add(lamp);
+  g.position.set(sp.x, 0, sp.z);
+  g.rotation.y = Math.atan2(sp.nx, sp.nz); // a frente (+z local) aponta para fora da parede
+  g.traverse((o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = false; } });
+  root.add(g);
+  return { x: sp.x, z: sp.z, nx: sp.nx, nz: sp.nz, group: g };
+}
+
 // ---------- temas ----------
 const std = (o) => new THREE.MeshStandardMaterial(o);
 const metalSet = (colors) => colors.map((c, i) => std({ map: TX.containerMetal(c, 21 + i), roughness: 0.6, metalness: 0.35 }));
@@ -624,6 +718,16 @@ export function buildMap(scene, renderer, mapId = 'ferrugem') {
     }
   }
 
+  // mural de homenagem: um por mapa, numa parede sorteada a cada partida
+  const avoid = T.decor === 'city' || T.decor === 'night' ? [{ x: -14, z: -11 }, { x: 14, z: 11 }, { x: 13, z: -18 }, { x: -13, z: 18 }] : [];
+  let mural = addMural(root, avoid);
+  // sorteia outra parede (a mesma semente em todos os aparelhos da sala)
+  const rerollMural = (seed) => {
+    if (mural) { root.remove(mural.group); mural.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
+    mural = addMural(root, avoid, seed);
+    out.mural = mural;
+  };
+
   scene.add(root);
 
   // ---------- iluminação e céu ----------
@@ -742,8 +846,10 @@ export function buildMap(scene, renderer, mapId = 'ferrugem') {
     });
   };
 
-  return {
+  const out = {
     id: def.id, name: def.name, def, root, boxes, walk, teamSpawns, ffaSpawns, sun, hemi, interiorLights, radarImg, radarPPM: PPM, skyDome,
-    night: T.night, exposure: T.exposure, vmLight: T.vmLight, botView: T.botView, baseHemi: T.hemi[2], dispose,
+    mural, rerollMural, night: T.night, exposure: T.exposure, vmLight: T.vmLight, botView: T.botView, baseHemi: T.hemi[2], dispose,
   };
+  return out;
+
 }

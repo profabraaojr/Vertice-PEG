@@ -285,6 +285,7 @@ class App {
     this.menu.hideAll();
     this.loadMap(msg.config.map || 'ferrugem');
     this.setNightVision(false);
+    this.map.rerollMural(msg.config.muralSeed ?? Math.random());
     this.game.startClient(msg);
     this.hud.setNightVision(false, this.map.night);
     if (this.map.night) this.toast('Mapa noturno: pressione X para ligar os óculos de visão noturna.');
@@ -344,10 +345,13 @@ class App {
 
   startMatch(cfg) {
     this.audio.init();
+    cfg = { ...cfg, muralSeed: null };
     this.lastConfig = { ...cfg };
     this.menu.hideAll();
     this.loadMap(cfg.map || 'ferrugem');
     this.setNightVision(false);
+    if (cfg.muralSeed == null) cfg.muralSeed = Math.random();
+    this.map.rerollMural(cfg.muralSeed);
     this.game.start(cfg);
     this.state = 'playing';
     this.hud.setNightVision(false, this.map.night);

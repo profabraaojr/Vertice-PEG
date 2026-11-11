@@ -20,6 +20,9 @@ html = html.replace('<script type="module" src="js/main.js"></script>', () => `<
 // biblioteca de salas (PeerJS) embutida para o arquivo único funcionar sem os outros arquivos
 const peer = fs.readFileSync('vendor/peerjs.min.js', 'utf8').replace(/<\/script/gi, '<\\/script');
 html = html.replace('<script src="vendor/peerjs.min.js"></script>', () => `<script>\n${peer}\n</script>`);
+// foto do mural embutida (o arquivo único não tem a pasta assets ao lado)
+const mural = fs.readFileSync('assets/mural-turma.jpg').toString('base64');
+for (const q of ["'", '"', '`']) html = html.split(`${q}assets/mural-turma.jpg${q}`).join(`${q}data:image/jpeg;base64,${mural}${q}`);
 fs.mkdirSync('dist', { recursive: true });
 fs.writeFileSync('dist/vertice.html', html);
 console.log(`dist/vertice.html gerado (${(html.length / 1024).toFixed(0)} KB)`);
