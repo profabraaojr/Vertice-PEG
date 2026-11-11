@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VÉRTICEBLOX — Assalto Tático</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="game" tabindex="-1"></canvas>
+  <div id="nv-overlay"></div>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="hidden">
+    <div id="crosshair"><i class="ch-t"></i><i class="ch-b"></i><i class="ch-l"></i><i class="ch-r"></i><i class="ch-dot"></i></div>
+    <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+    <div id="scope" class="hidden"><div class="scope-ring"></div><div class="scope-h"></div><div class="scope-v"></div></div>
+    <div id="damage-vignette"></div>
+    <div id="lowhp-vignette"></div>
+    <div id="damage-indicators"></div>
+
+    <canvas id="radar" width="190" height="190"></canvas>
+
+    <div id="topbar">
+      <div class="team-score" id="ts-left"><span class="ts-name" id="ts-left-name"></span><span class="ts-val" id="ts-left-val">0</span><div class="pips" id="pips-left"></div></div>
+      <div class="ts-center"><div id="timer">0:00</div><div id="round-label"></div></div>
+      <div class="team-score right" id="ts-right"><span class="ts-val" id="ts-right-val">0</span><span class="ts-name" id="ts-right-name"></span><div class="pips" id="pips-right"></div></div>
+    </div>
+    <div id="train-stats" class="hidden"></div>
+
+    <div id="killfeed"></div>
+
+    <div id="health-box">
+      <div class="hp-label">VIDA</div>
+      <div class="hp-row"><span id="hp-value">100</span><div class="hp-bar"><div id="hp-fill"></div></div></div>
+      <div id="protect">PROTEÇÃO DE RENASCIMENTO</div>
+    </div>
+
+    <div id="ammo-box">
+      <div id="weapon-slots"></div>
+      <div class="wpn"><span id="weapon-name"></span><span id="weapon-cat"></span></div>
+      <div class="ammo"><span id="ammo-mag">0</span><span id="ammo-res">/ 0</span></div>
+      <div id="reload-bar" class="hidden"><div id="reload-fill"></div><span>RECARREGANDO</span></div>
+    </div>
+
+    <div id="center-msg"><div id="center-title"></div><div id="center-sub"></div></div>
+    <div id="death-panel" class="hidden"><div class="dp-title"></div><div class="dp-sub"></div></div>
+    <div id="hint"></div>
+    <div id="nv-tag" class="hidden"></div>
+    <div id="fps" class="hidden"></div>
+    <div id="scoreboard" class="hidden"></div>
+  </div>
+
+  <!-- ================= MENUS ================= -->
+  <div id="menus">
+    <!-- tela inicial -->
+    <section class="screen active" id="screen-main">
+      <div class="main-wrap">
+        <div class="logo">
+          <div class="logo-mark"><span></span></div>
+          <h1>VÉRTICE</h1>
+          <p class="tagline">Operações táticas em primeira pessoa</p>
+          <p class="homage" id="homage"></p>
+          <p class="current-profile" id="current-profile"></p>
+        </div>
+        <nav class="main-nav">
+          <button class="btn primary big" data-action="play">Jogar</button>
+          <button class="btn big" data-action="coop">Cooperativo</button>
+          <button class="btn big" data-action="quick-training">Treinamento rápido</button>
+          <button class="btn big" data-action="profile">Perfil</button>
+          <button class="btn big" data-action="loadout">Arsenal</button>
+          <button class="btn big" data-action="settings">Configurações</button>
+          <button class="btn big" data-action="controls">Controles</button>
+        </nav>
+        <p class="foot">Clique em jogar para capturar o mouse · Esc libera o cursor e pausa</p>
+      </div>
+    </section>
+
+    <!-- seleção de partida -->
+    <section class="screen" id="screen-play">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Selecionar partida</h2><p id="map-desc"></p></header>
+        <div class="map-cards" id="map-cards"></div>
+        <div class="mode-cards">
+          <button class="mode-card" data-mode="team"><span class="mc-tag">5v5 · rodadas</span><h3>Equipe contra equipe</h3><p></p></button>
+          <button class="mode-card" data-mode="ffa"><span class="mc-tag">todos contra todos</span><h3>Mata-mata</h3><p></p></button>
+          <button class="mode-card" data-mode="training"><span class="mc-tag">prática livre</span><h3>Treinamento</h3><p></p></button>
+        </div>
+        <div class="opts">
+          <label class="opt"><span>Número de bots <output id="out-bots"></output></span><input type="range" id="opt-bots" min="1" max="11" step="1"></label>
+          <div class="opt"><span>Dificuldade dos bots</span>
+            <div class="seg" id="opt-diff">
+              <button data-v="recruta">Recruta</button><button data-v="soldado">Soldado</button><button data-v="veterano">Veterano</button><button data-v="elite">Elite</button>
+            </div>
+          </div>
+          <label class="opt" data-for="team"><span>Rodadas para vencer <output id="out-rounds"></output></span><input type="range" id="opt-rounds" min="2" max="10" step="1"></label>
+          <label class="opt" data-for="ffa"><span>Limite de eliminações <output id="out-score"></output></span><input type="range" id="opt-score" min="5" max="50" step="5"></label>
+          <label class="opt" data-for="ffa"><span>Tempo limite (min) <output id="out-time"></output></span><input type="range" id="opt-time" min="2" max="20" step="1"></label>
+          <label class="opt check" data-for="training"><input type="checkbox" id="opt-botshoot"><span>Bots revidam os disparos</span></label>
+        </div>
+        <footer class="panel-foot">
+          <button class="btn" data-action="back">Voltar</button>
+          <div class="grow"></div>
+          <button class="btn" data-action="loadout-from-play">Escolher armas</button>
+          <button class="btn primary" data-action="start">Iniciar partida</button>
+        </footer>
+      </div>
+    </section>
+
+
+    <!-- cooperativo -->
+    <section class="screen" id="screen-coop">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Cooperativo</h2><p>Até 4 jogadores na mesma equipe contra bots, por conexão direta entre navegadores. Não precisa de servidor: basta trocar dois códigos por mensagem.</p></header>
+        <div class="coop-top">
+          <label class="opt"><span>Seu nome</span><input type="text" id="coop-name" maxlength="18" placeholder="Seu nome"></label>
+          <div class="coop-roles">
+            <button class="btn primary" id="coop-host">Criar sala</button>
+            <button class="btn" id="coop-join">Entrar numa sala</button>
+          </div>
+        </div>
+
+        <div id="coop-host-panel" class="coop-panel hidden">
+          <div class="coop-steps">
+            <div class="coop-step">
+              <h4><b>1</b> Envie este convite ao seu amigo</h4>
+              <textarea id="coop-invite" readonly rows="4" placeholder="Gerando convite…"></textarea>
+              <div class="row"><button class="btn" id="coop-copy-invite">Copiar convite</button><button class="btn" id="coop-new-invite">Convidar outro jogador</button></div>
+            </div>
+            <div class="coop-step">
+              <h4><b>2</b> Cole aqui a resposta que ele devolver</h4>
+              <textarea id="coop-answer" rows="4" placeholder="Cole o código de resposta (começa com VTX)"></textarea>
+              <div class="row"><button class="btn primary" id="coop-connect">Conectar</button></div>
+            </div>
+          </div>
+          <div class="coop-bottom">
+            <div class="coop-players"><h4>Jogadores na sala</h4><ul id="coop-list"></ul></div>
+            <div class="coop-opts">
+              <h4>Partida</h4>
+              <label class="opt"><span>Mapa</span><select id="coop-map"></select></label>
+              <label class="opt"><span>Modo</span><select id="coop-mode"><option value="team">Equipe contra equipe (vocês contra bots)</option><option value="training">Treinamento (bots renascem)</option></select></label>
+              <label class="opt"><span>Bots <output id="coop-out-bots"></output></span><input type="range" id="coop-bots" min="2" max="11" step="1"></label>
+              <label class="opt"><span>Dificuldade</span><select id="coop-diff"><option value="recruta">Recruta</option><option value="soldado">Soldado</option><option value="veterano">Veterano</option><option value="elite">Elite</option></select></label>
+              <label class="opt" id="coop-rounds-wrap"><span>Rodadas para vencer <output id="coop-out-rounds"></output></span><input type="range" id="coop-rounds" min="2" max="10" step="1"></label>
+            </div>
+          </div>
+        </div>
+
+        <div id="coop-guest-panel" class="coop-panel hidden">
+          <div class="coop-steps">
+            <div class="coop-step">
+              <h4><b>1</b> Cole o convite do anfitrião</h4>
+              <textarea id="coop-invite-in" rows="4" placeholder="Cole o convite (começa com VTX)"></textarea>
+              <div class="row"><button class="btn primary" id="coop-make-answer">Gerar resposta</button></div>
+            </div>
+            <div class="coop-step">
+              <h4><b>2</b> Devolva esta resposta ao anfitrião</h4>
+              <textarea id="coop-answer-out" readonly rows="4" placeholder="A resposta aparece aqui"></textarea>
+              <div class="row"><button class="btn" id="coop-copy-answer">Copiar resposta</button></div>
+            </div>
+          </div>
+        </div>
+        <p class="coop-status" id="coop-status"></p>
+        <footer class="panel-foot">
+          <button class="btn" id="coop-leave">Voltar</button>
+          <div class="grow"></div>
+          <button class="btn" data-action="loadout">Arsenal</button>
+          <button class="btn primary hidden" id="coop-start">Iniciar partida</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- perfis -->
+    <section class="screen" id="screen-profile">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Perfis</h2><p id="profile-homage"></p></header>
+        <div class="profile">
+          <div class="pf-list">
+            <h4>Escolha seu perfil</h4>
+            <div class="pf-grid" id="pf-grid"></div>
+          </div>
+          <div class="pf-editor">
+            <div class="pf-view">
+              <canvas id="pf-body" title="Arraste para girar"></canvas>
+              <div class="pf-side">
+                <canvas id="pf-face"></canvas>
+                <b id="pf-name"></b>
+                <span id="pf-team">Uniforme padrão da equipe</span>
+              </div>
+            </div>
+            <div class="pf-opts">
+              <div class="pf-row"><span>Tom de pele</span><div class="swatches" id="pf-skin"></div></div>
+              <div class="pf-row"><span>Cor dos olhos</span><div class="swatches" id="pf-eyes"></div></div>
+              <div class="pf-row"><span>Estilo de cabelo</span><div class="chips" id="pf-hair"></div></div>
+              <div class="pf-row"><span>Cor do cabelo</span><div class="swatches" id="pf-haircolor"></div></div>
+              <div class="pf-row"><span>Camuflagem da farda</span><div class="camos" id="pf-camo"></div></div>
+              <p class="pf-note">O uniforme (colete, cinto, coturnos, luvas e as cores da equipe) é padrão para todos. A camuflagem muda a estampa da farda e das mangas.</p>
+            </div>
+          </div>
+        </div>
+        <footer class="panel-foot">
+          <button class="btn" data-action="back">Voltar</button>
+          <button class="btn" id="pf-random">Aparência aleatória</button>
+          <div class="grow"></div>
+          <button class="btn primary" id="pf-use">Usar este perfil</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- seleção de armas -->
+    <section class="screen" id="screen-loadout">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Seleção de armas</h2><p id="loadout-note">Escolha uma arma principal, uma pistola e uma espada.</p></header>
+        <div class="loadout">
+          <div class="lo-lists">
+            <h4>Principal</h4>
+            <div class="wgrid" id="lo-primary"></div>
+            <h4>Secundária</h4>
+            <div class="wgrid" id="lo-secondary"></div>
+            <h4>Corpo a corpo</h4>
+            <div class="wgrid" id="lo-melee"></div>
+          </div>
+          <div class="lo-detail" id="lo-detail"></div>
+        </div>
+        <footer class="panel-foot">
+          <button class="btn" data-action="back">Voltar</button>
+          <div class="grow"></div>
+          <button class="btn primary" data-action="loadout-confirm" id="lo-confirm">Confirmar</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- configurações -->
+    <section class="screen" id="screen-settings">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Configurações</h2></header>
+        <div class="tabs" id="set-tabs">
+          <button data-tab="gfx" class="active">Gráficos</button><button data-tab="audio">Áudio</button><button data-tab="input">Controles</button><button data-tab="ui">Interface</button>
+        </div>
+        <div class="tab-body active" data-tab="gfx">
+          <label class="opt"><span>Qualidade gráfica</span>
+            <select id="set-quality"><option value="baixa">Baixa (sem sombras)</option><option value="media">Média</option><option value="alta">Alta</option><option value="ultra">Ultra</option></select></label>
+          <label class="opt"><span>Escala de renderização <output id="out-scale"></output></span><input type="range" id="set-scale" min="0.5" max="1" step="0.05"></label>
+          <label class="opt"><span>Campo de visão <output id="out-fov"></output></span><input type="range" id="set-fov" min="65" max="105" step="1"></label>
+          <label class="opt check"><input type="checkbox" id="set-fps"><span>Mostrar contador de FPS</span></label>
+        </div>
+        <div class="tab-body" data-tab="audio">
+          <label class="opt"><span>Volume geral <output id="out-master"></output></span><input type="range" id="set-master" min="0" max="1" step="0.05"></label>
+          <label class="opt"><span>Efeitos sonoros <output id="out-sfx"></output></span><input type="range" id="set-sfx" min="0" max="1" step="0.05"></label>
+          <label class="opt"><span>Música <output id="out-music"></output></span><input type="range" id="set-music" min="0" max="1" step="0.05"></label>
+          <label class="opt check"><input type="checkbox" id="set-music-game"><span>Tocar música durante a partida</span></label>
+        </div>
+        <div class="tab-body" data-tab="input">
+          <label class="opt"><span>Sensibilidade do mouse <output id="out-sens"></output></span><input type="range" id="set-sens" min="0.1" max="4" step="0.05"></label>
+          <label class="opt"><span>Sensibilidade com luneta <output id="out-scope"></output></span><input type="range" id="set-scope" min="0.2" max="2" step="0.05"></label>
+          <label class="opt check"><input type="checkbox" id="set-invert"><span>Inverter eixo vertical</span></label>
+        </div>
+        <div class="tab-body" data-tab="ui">
+          <label class="opt"><span>Cor da mira</span>
+            <div class="swatches" id="set-ch-color">
+              <button data-v="#6dff9e" style="--c:#6dff9e"></button><button data-v="#ffffff" style="--c:#ffffff"></button><button data-v="#ffd166" style="--c:#ffd166"></button><button data-v="#4ad8ff" style="--c:#4ad8ff"></button><button data-v="#ff5ca8" style="--c:#ff5ca8"></button>
+            </div></label>
+          <label class="opt check"><input type="checkbox" id="set-ch-dot"><span>Ponto central na mira</span></label>
+          <label class="opt check"><input type="checkbox" id="set-ch-dyn"><span>Mira dinâmica (abre com a dispersão)</span></label>
+          <label class="opt check"><input type="checkbox" id="set-radar"><span>Exibir radar</span></label>
+        </div>
+        <footer class="panel-foot">
+          <button class="btn" data-action="reset-settings">Restaurar padrões</button>
+          <div class="grow"></div>
+          <button class="btn primary" data-action="back">Voltar</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- controles -->
+    <section class="screen" id="screen-controls">
+      <div class="panel">
+        <header class="panel-head"><h2>Controles</h2></header>
+        <table class="keys">
+          <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Caminhar</td></tr>
+          <tr><td><kbd>Shift</kbd></td><td>Correr (não é possível atirar correndo)</td></tr>
+          <tr><td><kbd>C</kbd> ou <kbd>Ctrl</kbd></td><td>Agachar (mais precisão, menos ruído)</td></tr>
+          <tr><td><kbd>Espaço</kbd></td><td>Pular (sobe em caixas baixas)</td></tr>
+          <tr><td>Mouse</td><td>Mirar</td></tr>
+          <tr><td>Botão esquerdo</td><td>Disparar</td></tr>
+          <tr><td>Botão direito</td><td>Mira de precisão · luneta (2 níveis no rifle de precisão)</td></tr>
+          <tr><td><kbd>R</kbd></td><td>Recarregar</td></tr>
+          <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Q</kbd> · roda</td><td>Principal / secundária / espada / última arma</td></tr>
+          <tr><td>Com a espada</td><td>Botão esquerdo corta · direito desfere golpe pesado · pelas costas causa o dobro</td></tr>
+          <tr><td><kbd>F</kbd></td><td>Inspecionar a arma</td></tr>
+          <tr><td><kbd>X</kbd></td><td>Óculos de visão noturna (só no mapa noturno)</td></tr>
+          <tr><td><kbd>B</kbd></td><td>Seleção de armas</td></tr>
+          <tr><td><kbd>Tab</kbd></td><td>Placar</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Pausa</td></tr>
+        </table>
+        <footer class="panel-foot"><div class="grow"></div><button class="btn primary" data-action="back">Voltar</button></footer>
+      </div>
+    </section>
+
+    <!-- pausa -->
+    <section class="screen" id="screen-pause">
+      <div class="panel narrow">
+        <header class="panel-head"><h2>Pausa</h2><p id="pause-note"></p></header>
+        <nav class="stack">
+          <button class="btn primary big" data-action="resume">Continuar</button>
+          <button class="btn" data-action="loadout-ingame">Seleção de armas</button>
+          <button class="btn" data-action="settings">Configurações</button>
+          <button class="btn" data-action="controls">Controles</button>
+          <button class="btn" data-action="restart">Reiniciar partida</button>
+          <button class="btn danger" data-action="quit">Sair para o menu</button>
+        </nav>
+      </div>
+    </section>
+
+    <!-- fim de partida -->
+    <section class="screen" id="screen-end">
+      <div class="panel wide">
+        <header class="panel-head center"><h2 id="end-title"></h2><p id="end-sub"></p></header>
+        <div class="end-stats" id="end-stats"></div>
+        <div id="end-board" class="end-board"></div>
+        <footer class="panel-foot">
+          <button class="btn" data-action="quit">Menu principal</button>
+          <div class="grow"></div>
+          <button class="btn primary" data-action="restart">Jogar novamente</button>
+        </footer>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast"></div>
+  <div id="loading"><div class="ld-mark"></div><p>Montando o Distrito Ferrugem…</p></div>
+  <noscript><p class="noscript">Este jogo requer JavaScript habilitado.</p></noscript>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
