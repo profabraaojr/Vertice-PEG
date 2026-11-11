@@ -10,14 +10,27 @@ Nesse endereço tudo funciona, inclusive o modo cooperativo. Não é preciso ins
 
 ### Celular e tablet
 
-No celular, o jogo detecta a tela de toque e mostra controles na tela:
+No celular, o jogo detecta a tela de toque e mostra controles na tela. No layout padrão (Clássico, destro):
 
 - **polegar esquerdo:** joystick que aparece onde você toca. Empurrado até a borda para a frente, corre;
-- **arrastar na metade direita:** mira (também funciona arrastando sobre o botão FOGO);
+- **arrastar em área livre:** mira (também funciona arrastando sobre o botão FOGO);
 - **botões à direita:** fogo, mira de precisão (luneta ou golpe pesado, conforme a arma), pular, agachar, recarregar e trocar arma. Há um segundo botão de fogo à esquerda;
-- **botões no topo:** visão noturna (no mapa noturno), armas, placar, tela cheia e pausa.
+- **botões no topo:** chat (multijogador), visão noturna (mapa noturno), armas, placar, tela cheia e pausa.
 
-Ao tocar em Jogar, o jogo entra em tela cheia e trava na horizontal (Android). Se o aparelho estiver na vertical, aparece um aviso para girá-lo. Na primeira abertura no celular, a qualidade gráfica começa em Média para manter a fluidez; a sensibilidade do toque pode ser ajustada em Configurações → Controles.
+Ao tocar em Jogar, o jogo entra em tela cheia. Na primeira abertura no celular, a qualidade gráfica começa em Média para manter a fluidez; a sensibilidade da mira por arraste fica em Configurações → Controles.
+
+#### Personalizar controles
+
+Em **Configurações → Controles → Personalizar controles** há um editor com uma simulação do celular:
+
+- **arrastar** qualquer botão para outra posição e usar a alça verde para redimensioná-lo. Cada orientação (horizontal e vertical) guarda posições próprias;
+- **por botão:** função, tamanho, opacidade, formato (circular, quadrado, arredondado, hexagonal), visibilidade e, no joystick e no FOGO, sensibilidade. Também é possível adicionar ou remover botões (por exemplo, botões diretos de arma principal, secundária e espada);
+- **ajustes gerais:** escala de todos os botões, espaçamento, opacidade geral, tipo de movimento (joystick dinâmico, fixo ou botões direcionais) e orientação da partida (livre, só horizontal ou só vertical);
+- **layouts prontos:** Clássico, Compacto e Ergonômico, cada um para destro, canhoto ou simétrico. Os layouts prontos se ajustam sozinhos para não haver botões sobrepostos em celulares pequenos ou tablets;
+- **perfis:** cinco perfis iniciais (Celular pequeno, Celular grande, Modo canhoto, Modo destro, Personalizado), com criar, duplicar, renomear, excluir, exportar (arquivo JSON) e importar;
+- **simulação:** este aparelho, celular pequeno, Android com barra de navegação, iPhone com recorte e tablet, nas duas orientações, com a área segura marcada. Botões sobrepostos aparecem em vermelho;
+- **Testar comandos:** toca-se nos botões da simulação e o editor mostra o comando executado, sem afetar a partida;
+- **Salvar** grava o perfil no aparelho e ativa-o na hora; **Restaurar padrão** volta ao Clássico destro. As posições são guardadas em coordenadas relativas à tela, e os botões nunca entram nas áreas de recorte ou nas barras do sistema.
 
 ### Instalar como aplicativo (iOS e Android)
 
@@ -173,7 +186,9 @@ js/guns.js          modelos detalhados das armas (perfis extrudados, materiais, 
 js/preview.js       prévia 3D das armas no arsenal
 js/models.js        modelos dos personagens (rosto, olhos, cabelo, farda)
 js/profiles.js      perfis dos alunos, opções de aparência e camuflagens
-js/touch.js         controles de toque (joystick, mira por arraste, botões)
+js/touch.js         controles de toque (joystick, mira por arraste, botões) a partir do layout ativo
+js/touchlayout.js   comandos, layouts prontos, perfis, geometria e exportação dos controles de toque
+js/controleditor.js editor "Personalizar controles"
 js/pwa.js           instalação como aplicativo e registro do service worker
 js/lobby.js         sala de espera: times, pronto, configurações do anfitrião e chat
 js/chat.js          chat durante a partida

@@ -62,7 +62,7 @@ export function saveSettings() {
 }
 
 export function resetSettings() {
-  const keep = { loadout: settings.loadout, match: settings.match, coop: settings.coop, nickname: settings.nickname, profile: settings.profile, looks: settings.looks };
+  const keep = { loadout: settings.loadout, match: settings.match, coop: settings.coop, nickname: settings.nickname, profile: settings.profile, looks: settings.looks, touchProfiles: settings.touchProfiles };
   Object.assign(settings, JSON.parse(JSON.stringify(DEFAULTS)), keep);
   saveSettings();
 }

@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { settings, QUALITY, saveSettings } from './settings.js';
 import { TouchControls, isTouchDevice } from './touch.js';
 import { setupPWA } from './pwa.js';
+import { ControlEditor } from './controleditor.js';
+import { activeLayout, onLayoutChange } from './touchlayout.js';
 import { Lobby } from './lobby.js';
 import { Chat } from './chat.js';
 import { buildMap, MAPS } from './map.js';
@@ -83,6 +85,17 @@ class App {
     this.lobby = new Lobby(this);
     this.chat = new Chat(this);
     this.touchUI = this.touch ? new TouchControls(this) : null;
+    this.ctlEditor = new ControlEditor(this);
+    // perfil salvo ou trocado no editor: a partida passa a usar o novo layout na hora
+    onLayoutChange(() => {
+      if (this.touchUI) this.touchUI.relayout();
+      this.lockOrientation();
+      this.updateRotateHint();
+    });
+    const orientCheck = () => this.updateRotateHint();
+    window.addEventListener('resize', orientCheck);
+    window.addEventListener('orientationchange', () => setTimeout(orientCheck, 250));
+    this.updateRotateHint();
     this.state = 'menu';
     this.menuT = 0;
     this.suppressPause = false;
@@ -307,16 +320,34 @@ class App {
     const el = doc.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
     if (!req) return;
-    const lock = () => {
-      try {
-        const o = screen.orientation;
-        if (o && o.lock) o.lock('landscape').catch(() => {});
-      } catch (e) { /* orientação livre */ }
-    };
+    const lock = () => this.lockOrientation();
     try {
       const p = req.call(el, { navigationUI: 'hide' });
       if (p && p.then) p.then(lock).catch(() => {}); else lock();
     } catch (e) { /* navegador recusou */ }
+  }
+
+  // Trava a orientação conforme o perfil de controles (só funciona em tela cheia no Android).
+  lockOrientation() {
+    const want = activeLayout().orient;
+    try {
+      const o = screen.orientation;
+      if (!o) return;
+      if (want === 'any') { if (o.unlock) o.unlock(); return; }
+      const doc = document;
+      if ((doc.fullscreenElement || doc.webkitFullscreenElement) && o.lock) o.lock(want).catch(() => {});
+    } catch (e) { /* orientação livre */ }
+  }
+
+  // Aviso para girar o aparelho apenas quando o perfil exige uma orientação diferente da atual.
+  updateRotateHint() {
+    if (!this.touch) return;
+    const want = activeLayout().orient;
+    const land = window.innerWidth >= window.innerHeight;
+    const wrong = (want === 'landscape' && !land) || (want === 'portrait' && land);
+    document.body.classList.toggle('rotate', wrong);
+    const t = document.getElementById('rotate-text');
+    if (t) t.textContent = want === 'portrait' ? 'Gire o aparelho para a vertical' : 'Gire o aparelho para a horizontal';
   }
 
   toggleFullscreen() {

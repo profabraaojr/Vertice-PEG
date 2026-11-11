@@ -327,6 +327,9 @@
           <label class="opt"><span>Sensibilidade com luneta <output id="out-scope"></output></span><input type="range" id="set-scope" min="0.2" max="2" step="0.05"></label>
           <label class="opt"><span>Sensibilidade do toque <output id="out-touch"></output></span><input type="range" id="set-touch" min="0.3" max="3" step="0.05"></label>
           <label class="opt check"><input type="checkbox" id="set-invert"><span>Inverter eixo vertical</span></label>
+          <div class="opt"><span>Controles na tela (celular e tablet)</span>
+            <button class="btn" data-action="ctl-editor" id="open-ctl-editor">Personalizar controles</button>
+            <small class="muted">Posição, tamanho, formato e função de cada botão, com perfis e teste.</small></div>
         </div>
         <div class="tab-body" data-tab="ui">
           <label class="opt"><span>Cor da mira</span>
@@ -376,6 +379,85 @@
     </section>
 
     <!-- pausa -->
+    <!-- editor de controles da tela de toque -->
+    <section class="screen" id="screen-ctl">
+      <div class="panel wide ctl-panel">
+        <header class="panel-head ctl-head"><h2>Personalizar controles</h2>
+          <p>Arraste os botões na tela simulada. Toque em um botão para ajustar tamanho, formato e função.</p></header>
+        <div class="ctl-grid">
+          <div class="ctl-left">
+            <div class="ctl-bar">
+              <select id="ctl-device" aria-label="Aparelho simulado"></select>
+              <div class="seg" id="ctl-orient"><button data-v="land">Horizontal</button><button data-v="port">Vertical</button></div>
+              <button class="btn" id="ctl-test">Testar comandos</button>
+            </div>
+            <div id="ctl-stage">
+              <div id="ctl-phone">
+                <div id="ctl-screen">
+                  <div class="ctl-bg"></div>
+                  <div id="ctl-notch" class="hidden"></div>
+                  <div id="ctl-safe"></div>
+                  <div id="ctl-ctls"></div>
+                </div>
+              </div>
+            </div>
+            <div class="ctl-legend"><i class="lg-safe"></i>Área segura (sem recorte nem barras) <i class="lg-bad"></i>Sobreposição</div>
+            <div id="ctl-warn" class="ctl-warn"></div>
+            <div id="ctl-state" class="ctl-state"></div>
+            <div id="ctl-log" class="ctl-log"></div>
+          </div>
+          <div class="ctl-side">
+            <div class="ctl-sec">
+              <h3>Perfil</h3>
+              <select id="ctl-profile" aria-label="Perfil de controles"></select>
+              <div class="chips ctl-actions">
+                <button id="ctl-new">Novo</button><button id="ctl-dup">Duplicar</button><button id="ctl-rename">Renomear</button><button id="ctl-del">Excluir</button><button id="ctl-export">Exportar</button><button id="ctl-import">Importar</button>
+              </div>
+              <div id="ctl-rename-box" class="ctl-row hidden"><input id="ctl-name" maxlength="30" aria-label="Nome do perfil"><button class="btn" id="ctl-rename-ok">OK</button></div>
+              <input type="file" id="ctl-file" accept="application/json,.json" hidden>
+            </div>
+            <div class="ctl-sec">
+              <h3>Layout pronto <small id="ctl-layout-state"></small></h3>
+              <div class="seg" id="ctl-preset"><button data-v="classic">Clássico</button><button data-v="compact">Compacto</button><button data-v="ergonomic">Ergonômico</button></div>
+              <div class="seg" id="ctl-hand"><button data-v="right">Destro</button><button data-v="left">Canhoto</button><button data-v="sym">Simétrico</button></div>
+              <button class="btn" id="ctl-apply">Aplicar layout</button>
+            </div>
+            <div class="ctl-sec" id="ctl-nosel"><h3>Botão</h3><p class="muted">Toque em um botão na tela simulada para editá-lo.</p></div>
+            <div class="ctl-sec hidden" id="ctl-sel">
+              <h3>Botão selecionado</h3>
+              <label class="opt"><span>Função</span><select id="ctl-cmd"></select></label>
+              <label class="opt"><span>Tamanho <output id="ctl-size-out"></output></span><input type="range" id="ctl-size" min="0.06" max="0.5" step="0.005"></label>
+              <small class="muted" id="ctl-sel-info"></small>
+              <label class="opt"><span>Opacidade <output id="ctl-eopacity-out"></output></span><input type="range" id="ctl-eopacity" min="0.15" max="1" step="0.05"></label>
+              <label class="opt" id="ctl-sens-wrap"><span><b id="ctl-sens-label">Sensibilidade</b> <output id="ctl-sens-out"></output></span><input type="range" id="ctl-sens" min="0.3" max="2.5" step="0.05"></label>
+              <div class="opt"><span>Formato</span><div class="chips" id="ctl-shape"></div></div>
+              <label class="opt check"><input type="checkbox" id="ctl-visible"><span>Visível durante a partida</span></label>
+              <button class="btn" id="ctl-remove">Remover botão</button>
+            </div>
+            <div class="ctl-sec">
+              <h3>Adicionar botão</h3>
+              <div class="ctl-row"><select id="ctl-add-cmd" aria-label="Função do novo botão"></select><button class="btn" id="ctl-add">Adicionar</button></div>
+            </div>
+            <div class="ctl-sec">
+              <h3>Ajustes gerais</h3>
+              <label class="opt"><span>Escala de todos os botões <output id="ctl-scale-out"></output></span><input type="range" id="ctl-scale" min="0.6" max="1.6" step="0.05"></label>
+              <label class="opt"><span>Espaçamento <output id="ctl-spacing-out"></output></span><input type="range" id="ctl-spacing" min="0.6" max="1.4" step="0.05"></label>
+              <label class="opt"><span>Opacidade geral <output id="ctl-opacity-out"></output></span><input type="range" id="ctl-opacity" min="0.2" max="1" step="0.05"></label>
+              <label class="opt"><span>Movimento</span><select id="ctl-move"><option value="dynamic">Joystick dinâmico (surge onde tocar)</option><option value="fixed">Joystick fixo</option><option value="dpad">Botões direcionais</option></select></label>
+              <label class="opt"><span>Orientação da partida</span><select id="ctl-gorient"><option value="any">Livre (horizontal ou vertical)</option><option value="landscape">Somente horizontal</option><option value="portrait">Somente vertical</option></select></label>
+            </div>
+          </div>
+        </div>
+        <footer class="panel-foot">
+          <button class="btn" id="ctl-reset">Restaurar padrão</button>
+          <span id="ctl-status" class="ctl-status" role="status"></span>
+          <div class="grow"></div>
+          <button class="btn" id="ctl-back">Voltar</button>
+          <button class="btn" id="ctl-save">Salvo</button>
+        </footer>
+      </div>
+    </section>
+
     <section class="screen" id="screen-pause">
       <div class="panel narrow">
         <header class="panel-head"><h2>Pausa</h2><p id="pause-note"></p></header>
@@ -406,7 +488,7 @@
   </div>
 
   <div id="toast"></div>
-  <div id="rotate-hint"><div class="rh-phone"></div><p>Gire o aparelho para a horizontal</p></div>
+  <div id="rotate-hint"><div class="rh-phone"></div><p id="rotate-text">Gire o aparelho para a horizontal</p></div>
   <div id="loading"><div class="ld-mark"></div><p>Montando o Distrito Ferrugem…</p></div>
   <noscript><p class="noscript">Este jogo requer JavaScript habilitado.</p></noscript>
 </div>

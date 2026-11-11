@@ -71,6 +71,7 @@ export class Menu {
       case 'loadout-confirm': this.confirmLoadout(); break;
       case 'settings': this.syncSettings(); this.show('screen-settings'); break;
       case 'controls': this.show('screen-controls'); break;
+      case 'ctl-editor': app.ctlEditor.open(); break;
       case 'back': this.back(); break;
       case 'start': app.startMatch(this.matchConfig()); break;
       case 'resume': app.resume(); break;
