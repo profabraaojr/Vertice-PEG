@@ -74,19 +74,29 @@ export class Game {
     this.teamScore = { A: 0, B: 0 };
     this.deathCam = null;
     this.pendingLoadout = null;
-    this.coop = !!(this.net && this.net.role === 'host' && this.net.connectedPeers.length);
-    const guests = this.coop ? this.net.connectedPeers : [];
+    // sala multijogador: a composição dos times vem da sala de espera (config.net)
+    const room = this.config.net || null;
+    const peers = this.net && this.net.role === 'host' ? this.net.connectedPeers : [];
+    const guests = room ? peers.filter((g) => room.teams[g.id]) : peers;
+    this.coop = !!(this.net && this.net.role === 'host' && guests.length);
 
-    const pTeam = mode === 'ffa' ? 'P' : 'A';
-    this.player = new Player({ id: 0, name: playerName(), team: pTeam, color: mode === 'ffa' ? FFA_COLORS[0] : TEAMS.A.color });
+    const pTeam = mode === 'ffa' ? 'P' : room && mode === 'team' ? room.hostTeam : 'A';
+    this.player = new Player({ id: 0, name: playerName(), team: pTeam, color: mode === 'ffa' ? FFA_COLORS[0] : TEAMS[pTeam].color });
     this.player.setLoadout(settings.loadout.primary, settings.loadout.secondary, mode === 'training', settings.loadout.melee);
 
     // os bots levam os nomes (e a aparência salva) dos alunos que não estão jogando
     const taken = new Set([activeProfile(), ...guests.map((g) => g.name)]);
     let names = shuffle(STUDENTS.filter((n) => !taken.has(n)));
     if (names.length < this.config.bots) names = names.concat(shuffle(BOT_NAMES.slice()));
-    const total = this.config.bots + 1 + guests.length;
-    const aBots = mode === 'team' ? Math.max(0, Math.ceil(total / 2) - 1 - guests.length) : 0;
+    let aBots;
+    if (room) {
+      // bots definidos pela sala: os primeiros completam a Vanguarda, os demais a Sentinela
+      this.config.bots = (room.botsA || 0) + (room.botsB || 0);
+      aBots = mode === 'team' ? room.botsA || 0 : 0;
+    } else {
+      const total = this.config.bots + 1 + guests.length;
+      aBots = mode === 'team' ? Math.max(0, Math.ceil(total / 2) - 1 - guests.length) : 0;
+    }
     this.bots = [];
     for (let i = 0; i < this.config.bots; i++) {
       let team, color;
@@ -100,7 +110,7 @@ export class Game {
       this.scene.add(bot.model.root);
       this.bots.push(bot);
     }
-    this.remotes = guests.map((g) => this.createRemote(g, mode === 'ffa' ? `R${g.id}` : pTeam));
+    this.remotes = guests.map((g) => this.createRemote(g, mode === 'ffa' ? `R${g.id}` : room && mode === 'team' ? room.teams[g.id] : 'A'));
     this.combatants = [this.player, ...this.remotes, ...this.bots];
     this.viewmodel.setWeapon(this.player.weapon.def, false);
     this.effects.clear();
@@ -175,7 +185,9 @@ export class Game {
     this.phase = 'matchEnd';
     this.phaseT = 3;
     const r = this.results();
-    this.announce(r.title, r.subtitle, 3, r.color, 'matchEnd', { win: r.playerWon });
+    const ts = this.teamScore;
+    const winTeam = r.mode === 'team' ? (ts.A > ts.B ? 'A' : ts.B > ts.A ? 'B' : '') : null;
+    this.announce(r.title, r.subtitle, 3, r.color, 'matchEnd', { win: r.playerWon, winTeam });
   }
 
   results() {
@@ -185,7 +197,7 @@ export class Game {
     let title, subtitle, playerWon = false, color = null;
     if (mode === 'team') {
       const w = this.teamScore.A > this.teamScore.B ? 'A' : this.teamScore.B > this.teamScore.A ? 'B' : null;
-      playerWon = w === 'A';
+      playerWon = w === p.team;
       title = w ? `${TEAMS[w].name.toUpperCase()} VENCE` : 'EMPATE';
       subtitle = `Placar final: Vanguarda ${this.teamScore.A} × ${this.teamScore.B} Sentinela`;
       color = w ? TEAMS[w].css : null;

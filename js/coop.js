@@ -81,7 +81,7 @@ export function installCoop(Game) {
     if (sound === 'roundStart') this.audio.roundStart();
     else if (sound === 'beep') this.audio.beep(660, 0.15, 0.12);
     else if (sound === 'roundEnd') this.audio.roundEnd(extra.win === this.player.team);
-    else if (sound === 'matchEnd') this.audio.roundEnd(!!extra.win);
+    else if (sound === 'matchEnd') this.audio.roundEnd(extra.winTeam != null ? extra.winTeam === this.player.team : !!extra.win);
   };
 
   P.fxBegin = function () {
@@ -316,6 +316,11 @@ export function installCoop(Game) {
       case 'end': {
         const res = msg.r;
         res.rows = res.rows.map((row) => ({ ...row, isPlayer: row.id === p.id }));
+        if (res.mode === 'team') {
+          const ts = res.teamScore || {};
+          const w = ts.A > ts.B ? 'A' : ts.B > ts.A ? 'B' : null;
+          res.playerWon = w === p.team;
+        }
         res.acc = p.shots ? Math.round((p.hits / p.shots) * 100) : 0;
         res.hs = p.kills ? Math.round((p.headshots / p.kills) * 100) : 0;
         if (this.onMatchEnd) { this.active = false; this.onMatchEnd(res); }

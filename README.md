@@ -86,18 +86,34 @@ A tela **Jogar** (e a sala cooperativa) permite escolher entre quatro mapas, tod
 | Selva Esmeralda | Clareiras entre árvores altas, moitas que escondem (mas não param balas), rochas e cabanas de bambu |
 | Ruínas de Aruanã | Templo de pedra ao entardecer: colunatas, câmaras, muros em ruínas e pirâmides no horizonte |
 
-## Cooperativo (até 4 jogadores)
+## Multijogador (até 8 jogadores)
 
-Você e até três amigos jogam na mesma equipe contra bots, no modo equipe contra equipe ou no treinamento. A conexão é direta entre os navegadores (WebRTC) e não exige servidor:
+No menu **Multijogador**, qualquer jogador cria uma sala privada e vira o anfitrião. Os colegas entram com o **código de 6 caracteres** ou pelo **link de convite** (que já abre com o código preenchido). Cada sala comporta até 8 jogadores, em dois times de até 4.
 
-1. O anfitrião abre **Cooperativo**, digita o nome, clica em **Criar sala** e envia o **convite** (um código que começa com `VTX`) por mensagem.
-2. O convidado abre **Cooperativo → Entrar numa sala**, cola o convite, clica em **Gerar resposta** e devolve a resposta ao anfitrião.
-3. O anfitrião cola a resposta e clica em **Conectar**. Quando o nome do amigo aparece na lista, a conexão está pronta. Para mais jogadores, use **Convidar outro jogador** e repita os passos.
-4. O anfitrião escolhe modo, bots e dificuldade e clica em **Iniciar partida**.
+**Na sala de espera:**
 
-O computador do anfitrião roda as regras, os bots e o dano; os convidados enviam movimento, mira e disparos, e recebem o estado do mundo cerca de 20 vezes por segundo. Por isso, o desempenho do anfitrião afeta todos, e a partida não pausa quando alguém abre o menu. Se o anfitrião sair, a sala se encerra.
+- todos veem quem entrou, em qual time e quem está pronto;
+- cada jogador escolhe seu time (Vanguarda ou Sentinela) e marca **Estou pronto**;
+- há um chat para combinar a partida;
+- o anfitrião escolhe a modalidade, o formato, o mapa, a dificuldade dos bots e o número de rodadas, e inicia a partida quando todos estiverem prontos.
 
-Limitações conhecidas: a conexão direta depende das redes envolvidas. Em redes domésticas comuns costuma funcionar; redes corporativas, de escola ou algumas operadoras móveis podem bloqueá-la, porque o jogo não usa servidor de retransmissão (TURN). Os códigos valem para uma única conexão: se algo falhar, gere um novo convite. O movimento de cada convidado é decidido no próprio computador dele, o que pressupõe confiança entre os participantes.
+**Modalidades:**
+
+| Modalidade | Como funciona |
+|---|---|
+| PvP | Os jogadores se dividem em dois times e competem entre si. Vagas vazias podem ser preenchidas por bots |
+| Cooperativo | Até 4 jogadores na mesma equipe contra bots (1 a 8 inimigos), com opção de completar a equipe com bots aliados. Formatos: rodadas por eliminação ou treinamento com renascimento |
+
+Durante a partida, **Enter** ou **T** abre o chat (no celular, o botão CHAT). No fim, todos voltam à sala com **Voltar à sala** e podem jogar de novo sem reconectar.
+
+**Como funciona por dentro:** o computador do anfitrião roda as regras, os bots e o dano; os demais enviam movimento, mira, disparos e golpes, e recebem o estado do mundo cerca de 20 vezes por segundo. A conexão é direta entre os aparelhos (WebRTC). O serviço público e gratuito PeerJS (0.peerjs.com) só serve para encontrar a sala pelo código, e os servidores de retransmissão (TURN) do PeerJS entram em ação quando a rede bloqueia a conexão direta (comum em redes de escola e 4G).
+
+**Limitações:**
+
+- o anfitrião precisa manter o jogo aberto; se ele sair, a sala se encerra;
+- o desempenho e a conexão do anfitrião afetam todos;
+- o servidor de salas e os de retransmissão são gratuitos e mantidos pelo projeto PeerJS, sem garantia de disponibilidade. Se estiverem fora do ar, há uma **conexão alternativa sem servidor** (troca manual de códigos) na própria tela, que funciona melhor entre aparelhos da mesma rede;
+- o movimento de cada jogador é decidido no próprio aparelho, o que pressupõe confiança entre os participantes.
 
 ## Controles
 
@@ -159,6 +175,9 @@ js/models.js        modelos dos personagens (rosto, olhos, cabelo, farda)
 js/profiles.js      perfis dos alunos, opções de aparência e camuflagens
 js/touch.js         controles de toque (joystick, mira por arraste, botões)
 js/pwa.js           instalação como aplicativo e registro do service worker
+js/lobby.js         sala de espera: times, pronto, configurações do anfitrião e chat
+js/chat.js          chat durante a partida
+vendor/peerjs.min.js  biblioteca PeerJS (salas por código e retransmissão)
 sw.js               service worker (cache para abrir sem internet)
 manifest.webmanifest  dados do aplicativo instalável (nome, ícones, tela cheia)
 js/viewmodel.js     arma em primeira pessoa e animações

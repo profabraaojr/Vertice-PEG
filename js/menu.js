@@ -28,7 +28,6 @@ export class Menu {
     this.initPlay();
     this.initProfiles();
     this.initInstall();
-    this.initCoop();
     this.initSettings();
     this.buildLoadout();
   }
@@ -111,9 +110,6 @@ export class Menu {
         if (this.app.state === 'menu') this.app.loadMap(id); // mostra o mapa escolhido ao fundo
       });
       cards.appendChild(el);
-      const opt = document.createElement('option');
-      opt.value = id; opt.textContent = `${m.name} (${m.tag})`;
-      $('coop-map').appendChild(opt);
     });
     document.querySelectorAll('.mode-card').forEach((card) => {
       card.querySelector('p').textContent = MODE_INFO[card.dataset.mode].desc;
@@ -469,133 +465,24 @@ export class Menu {
     $('current-profile').textContent = p ? `Perfil: ${p}` : 'Nenhum perfil escolhido · clique em Perfil';
   }
 
-  // ---------- cooperativo ----------
-  initCoop() {
-    const app = this.app;
-    const net = app.net;
-    const nameEl = $('coop-name');
-    nameEl.value = settings.nickname || activeProfile() || '';
-    nameEl.addEventListener('input', () => { settings.nickname = nameEl.value.trim().slice(0, 18); saveSettings(); });
-    const name = () => (nameEl.value.trim() || 'Jogador').slice(0, 18);
-    const busy = async (btn, fn) => {
-      btn.disabled = true;
-      try { await fn(); } catch (e) { this.coopStatus(e.message || String(e), true); } finally { btn.disabled = false; }
-    };
-    const copy = async (el) => {
-      if (!el.value) return;
-      el.select();
-      let ok = false;
-      try { await navigator.clipboard.writeText(el.value); ok = true; } catch (e) { try { ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
-      app.toast(ok ? 'Código copiado. Envie por mensagem.' : 'Selecione o texto e copie com Ctrl+C.');
-    };
-    const newInvite = async () => {
-      $('coop-invite').value = '';
-      this.coopStatus('Gerando convite… (pode levar alguns segundos)');
-      $('coop-invite').value = await net.createInvite(name());
-      this.coopStatus('Convite pronto. Envie ao amigo e cole a resposta dele no passo 2.');
-      this.renderCoopList();
-    };
-    $('coop-host').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-      app.audio.init();
-      if (net.role !== 'host') net.close();
-      $('coop-host-panel').classList.remove('hidden');
-      $('coop-guest-panel').classList.add('hidden');
-      $('coop-start').classList.remove('hidden');
-      await newInvite();
-    }));
-    $('coop-new-invite').addEventListener('click', (e) => busy(e.currentTarget, newInvite));
-    $('coop-copy-invite').addEventListener('click', () => copy($('coop-invite')));
-    $('coop-connect').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-      await net.acceptAnswer($('coop-answer').value);
-      $('coop-answer').value = '';
-      this.coopStatus('Conectando… quando o nome do amigo aparecer na lista, a conexão está pronta.');
-      this.renderCoopList();
-    }));
-    $('coop-join').addEventListener('click', () => {
-      app.audio.init();
-      net.close();
-      $('coop-guest-panel').classList.remove('hidden');
-      $('coop-host-panel').classList.add('hidden');
-      $('coop-start').classList.add('hidden');
-      $('coop-answer-out').value = '';
-      this.coopStatus('Cole o convite que o anfitrião enviou.');
-    });
-    $('coop-make-answer').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-      this.coopStatus('Gerando resposta…');
-      $('coop-answer-out').value = await net.joinWithInvite($('coop-invite-in').value, name(), settings.loadout, activeLook());
-      this.coopStatus('Envie a resposta ao anfitrião e aguarde a conexão.');
-    }));
-    $('coop-copy-answer').addEventListener('click', () => copy($('coop-answer-out')));
-    $('coop-leave').addEventListener('click', () => {
-      net.close();
-      $('coop-host-panel').classList.add('hidden');
-      $('coop-guest-panel').classList.add('hidden');
-      $('coop-start').classList.add('hidden');
-      this.coopStatus('');
-      this.reset('screen-main');
-    });
-    $('coop-start').addEventListener('click', () => {
-      if (!net.connectedPeers.length) { this.coopStatus('Nenhum convidado conectado ainda.', true); return; }
-      const c = settings.coop;
-      app.startMatch({ map: c.map, mode: c.mode, bots: c.bots, difficulty: c.difficulty, rounds: c.rounds, timeLimit: 8, scoreLimit: 25, botsShoot: true });
-    });
-    // opções da partida cooperativa
-    const sync = () => {
-      const c = settings.coop;
-      if (!MAPS[c.map]) c.map = 'ferrugem';
-      $('coop-map').value = c.map;
-      $('coop-mode').value = c.mode; $('coop-diff').value = c.difficulty;
-      $('coop-bots').value = c.bots; $('coop-out-bots').textContent = c.bots;
-      $('coop-rounds').value = c.rounds; $('coop-out-rounds').textContent = c.rounds;
-      $('coop-rounds-wrap').classList.toggle('hidden', c.mode !== 'team');
-    };
-    $('coop-map').addEventListener('change', (e) => { settings.coop.map = e.target.value; saveSettings(); });
-    $('coop-mode').addEventListener('change', (e) => { settings.coop.mode = e.target.value; saveSettings(); sync(); });
-    $('coop-diff').addEventListener('change', (e) => { settings.coop.difficulty = e.target.value; saveSettings(); });
-    $('coop-bots').addEventListener('input', (e) => { settings.coop.bots = Number(e.target.value); saveSettings(); sync(); });
-    $('coop-rounds').addEventListener('input', (e) => { settings.coop.rounds = Number(e.target.value); saveSettings(); sync(); });
-    sync();
-    net.onPeersChange = () => {
-      this.renderCoopList();
-      const n = net.connectedPeers.length;
-      if (n) this.coopStatus(`${n} ${n === 1 ? 'convidado conectado' : 'convidados conectados'}. Inicie quando quiser ou convide mais alguém.`);
-    };
-    net.onStatus = (st) => {
-      if (st === 'connected') this.coopStatus('Conectado! Aguardando o anfitrião iniciar a partida.');
-    };
-  }
-
+  // ---------- multijogador (a lógica fica em lobby.js) ----------
   openCoop() {
-    this.show('screen-coop');
-    if (EMBEDDED) { this.coopStatus(BLOCKED_MSG, true); this.renderCoopList(); return; }
-    if (this.app.net.role === 'guest' && this.app.net.host) this.coopStatus('Conectado! Aguardando o anfitrião iniciar a partida.');
-    this.renderCoopList();
+    if (EMBEDDED) { this.show('screen-coop'); this.coopStatus(BLOCKED_MSG, true); return; }
+    this.app.lobby.open();
   }
 
   coopStatus(text, err = false) {
-    const el = $('coop-status');
-    el.textContent = text;
-    el.classList.toggle('err', err);
+    if (this.app.lobby) this.app.lobby.status(text, err); else { const el = $('coop-status'); el.textContent = text; el.classList.toggle('err', err); }
   }
 
-  renderCoopList() {
-    const ul = $('coop-list');
-    if (!ul) return;
-    const net = this.app.net;
-    ul.innerHTML = '';
-    const li = (text, pending) => { const l = document.createElement('li'); l.textContent = text; if (pending) l.className = 'pending'; ul.appendChild(l); };
-    li(`${($('coop-name').value.trim() || 'Jogador')} (anfitrião)`);
-    for (const p of net.peers.values()) {
-      if (p.open) li(p.name);
-      else li(p.answered ? 'Conectando…' : 'Convite aguardando resposta', true);
-    }
-  }
+  renderCoopList() { if (this.app.lobby) this.app.lobby.render(); }
 
   // ---------- pausa e fim ----------
   showPause(note = '') {
     const coop = this.app.game.coop;
     $('pause-note').textContent = note || (coop ? 'Partida cooperativa: o jogo continua enquanto você está no menu.' : 'A partida está pausada.');
     document.querySelector('#screen-pause [data-action="restart"]').classList.toggle('hidden', this.app.game.isClient);
+    document.querySelector('#screen-pause [data-action="quit"]').textContent = this.app.net.active ? (this.app.net.role === 'host' ? 'Encerrar a sala' : 'Sair da sala') : 'Sair para o menu';
     const canLo = this.app.game.config && (this.app.game.config.mode !== 'team' || true);
     document.querySelector('[data-action="loadout-ingame"]').classList.toggle('hidden', !canLo);
     this.reset('screen-pause');
@@ -651,7 +538,8 @@ export class Menu {
       board.appendChild(table('Classificação', r.rows, null));
     }
     const rb = document.querySelector('#screen-end [data-action="restart"]');
-    rb.textContent = this.app.net.role === 'guest' ? 'Aguardar próxima partida' : 'Jogar novamente';
+    rb.textContent = this.app.net.active ? 'Voltar à sala' : 'Jogar novamente';
+    document.querySelector('#screen-end [data-action="quit"]').textContent = this.app.net.active ? 'Sair da sala' : 'Menu principal';
     this.reset('screen-end');
   }
 }

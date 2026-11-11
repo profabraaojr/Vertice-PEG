@@ -13,6 +13,9 @@ export class Input {
     this.onLockChange = null;
 
     window.addEventListener('keydown', (e) => {
+      // digitando no chat ou num campo de texto: o teclado não comanda o jogo
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
       if (this.enabled && BLOCK.has(e.code)) e.preventDefault();
       if (!this.keys.has(e.code)) this.pressed.add(e.code);
       this.keys.add(e.code);

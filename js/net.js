@@ -5,7 +5,52 @@
 // Servidores STUN públicos só ajudam cada navegador a descobrir o próprio endereço.
 
 const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
-export const MAX_GUESTS = 3;
+export const MAX_GUESTS = 7; // sala com até 8 jogadores (2 times de 4)
+const ROOM_PREFIX = 'vertice-peg-sala-';
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem letras e números parecidos (O/0, I/1)
+
+export function newRoomCode() {
+  let c = '';
+  const r = new Uint32Array(6);
+  crypto.getRandomValues(r);
+  for (const v of r) c += CODE_CHARS[v % CODE_CHARS.length];
+  return c;
+}
+export const normalizeCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+
+// Canal de dados do PeerJS com a mesma interface de um RTCDataChannel (onmessage, onopen, send, readyState).
+function wrapConn(conn) {
+  const ch = {
+    conn,
+    onmessage: null,
+    onopen: null,
+    onclose: null,
+    get readyState() { return conn.open ? 'open' : 'connecting'; },
+    send(data) { conn.send(data); },
+    close() { try { conn.close(); } catch (e) { /* já fechado */ } },
+  };
+  conn.on('data', (d) => { if (ch.onmessage) ch.onmessage({ data: typeof d === 'string' ? d : JSON.stringify(d) }); });
+  conn.on('open', () => { if (ch.onopen) ch.onopen(); });
+  conn.on('close', () => { if (ch.onclose) ch.onclose(); });
+  conn.on('error', () => { if (ch.onclose) ch.onclose(); });
+  return ch;
+}
+
+function peerLib() {
+  const lib = window.peerjs;
+  if (!lib || !lib.Peer) throw new Error('Não foi possível carregar o módulo de salas. Verifique a internet e recarregue a página.');
+  return lib.Peer;
+}
+
+const PEER_ERRORS = {
+  'peer-unavailable': 'Sala não encontrada. Confira o código ou peça um convite novo ao anfitrião.',
+  'network': 'Sem conexão com o servidor de salas. Verifique a internet e tente de novo.',
+  'server-error': 'O servidor de salas não respondeu. Tente de novo em instantes.',
+  'socket-error': 'Sem conexão com o servidor de salas. Verifique a internet e tente de novo.',
+  'browser-incompatible': 'Este navegador não permite partidas online. Use Chrome, Edge, Firefox ou Safari atualizados.',
+  'webrtc': 'A conexão entre os aparelhos falhou. Tente de novo ou use outra rede.',
+};
+const peerError = (err) => new Error(PEER_ERRORS[err && err.type] || `Falha na conexão: ${(err && (err.type || err.message)) || 'desconhecida'}.`);
 
 function toB64(bytes) {
   let s = '';
@@ -120,11 +165,14 @@ export class Net {
       if (!p) return;
       const was = p.open;
       this.peers.delete(peerId);
-      try { p.pc.close(); } catch (e) { /* já fechado */ }
+      try { if (p.pc) p.pc.close(); } catch (e) { /* já fechado */ }
+      for (const ch of [p.ctrl, p.fast]) if (ch && ch.close && !p.pc) ch.close();
       if (this.onPeersChange) this.onPeersChange();
       if (was && this.onPeerLost) this.onPeerLost(peerId, p.name);
     } else if (this.role === 'guest' && this.host) {
-      try { this.host.pc.close(); } catch (e) { /* já fechado */ }
+      try { if (this.host.pc) this.host.pc.close(); } catch (e) { /* já fechado */ }
+      for (const ch of [this.host.ctrl, this.host.fast]) if (ch && ch.close && !this.host.pc) ch.close();
+      if (this.peer) { try { this.peer.destroy(); } catch (e) { /* */ } this.peer = null; }
       this.host = null;
       this.role = null;
       if (this.onHostLost) this.onHostLost();
@@ -137,7 +185,96 @@ export class Net {
     });
   }
 
-  // ---------- anfitrião ----------
+  // ---------- salas por código (servidor público de sinalização + retransmissão TURN) ----------
+  // Cria a sala e devolve o código de 6 caracteres. Os convidados entram só com o código.
+  async createRoom(name) {
+    const Peer = peerLib();
+    this.close();
+    this.role = 'host';
+    this.myName = name;
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const code = newRoomCode();
+      try {
+        const peer = await new Promise((resolve, reject) => {
+          const pr = new Peer(ROOM_PREFIX + code, { debug: 0 });
+          const t = setTimeout(() => { pr.destroy(); reject(new Error(PEER_ERRORS.network)); }, 15000);
+          pr.on('open', () => { clearTimeout(t); resolve(pr); });
+          pr.on('error', (err) => { clearTimeout(t); pr.destroy(); reject(err.type === 'unavailable-id' ? Object.assign(new Error('id'), { retry: true }) : peerError(err)); });
+        });
+        this.peer = peer;
+        this.roomCode = code;
+        peer.on('connection', (conn) => this.acceptConn(conn));
+        // se a ligação com o servidor cair, as partidas em andamento continuam; reconecta para aceitar novos jogadores
+        peer.on('disconnected', () => { try { if (!peer.destroyed) peer.reconnect(); } catch (e) { /* */ } });
+        peer.on('error', () => { /* erros de convidados individuais são tratados em cada conexão */ });
+        return code;
+      } catch (e) {
+        lastErr = e;
+        if (!e.retry) break;
+      }
+    }
+    this.role = null;
+    throw lastErr && !lastErr.retry ? lastErr : new Error(PEER_ERRORS['server-error']);
+  }
+
+  acceptConn(conn) {
+    const remote = conn.peer;
+    let peer = [...this.peers.values()].find((p) => p.remote === remote);
+    if (!peer) {
+      if (this.peers.size >= MAX_GUESTS) {
+        conn.on('open', () => { try { conn.send(JSON.stringify({ t: 'full' })); } catch (e) { /* */ } setTimeout(() => conn.close(), 800); });
+        return;
+      }
+      const id = this.nextId++;
+      peer = { id, remote, name: `Jogador ${id + 1}`, loadout: null, open: false, answered: true, via: 'room' };
+      this.peers.set(id, peer);
+    }
+    const ch = wrapConn(conn);
+    const label = conn.label === 'fast' ? 'fast' : 'ctrl';
+    peer[label] = ch;
+    this.setupChannel(ch, peer.id, label, peer);
+  }
+
+  // Entra na sala do código informado. Resolve quando o anfitrião aceitar a conexão.
+  async joinRoom(code, name, loadout, look = null) {
+    const Peer = peerLib();
+    code = normalizeCode(code);
+    if (code.length !== 6) throw new Error('O código da sala tem 6 caracteres.');
+    this.close();
+    this.role = 'guest';
+    this.myName = name;
+    this.myLoadout = loadout;
+    this.myLook = look;
+    this.roomCode = code;
+    if (this.onStatus) this.onStatus('joining');
+    try {
+      const peer = await new Promise((resolve, reject) => {
+        const pr = new Peer({ debug: 0 });
+        const t = setTimeout(() => { pr.destroy(); reject(new Error(PEER_ERRORS.network)); }, 15000);
+        pr.on('open', () => { clearTimeout(t); resolve(pr); });
+        pr.on('error', (err) => { clearTimeout(t); pr.destroy(); reject(peerError(err)); });
+      });
+      this.peer = peer;
+      await new Promise((resolve, reject) => {
+        const target = ROOM_PREFIX + code;
+        const ctrl = wrapConn(peer.connect(target, { label: 'ctrl', reliable: true, serialization: 'raw' }));
+        const fast = wrapConn(peer.connect(target, { label: 'fast', reliable: false, serialization: 'raw' }));
+        this.host = { ctrl, fast, via: 'room' };
+        this.setupChannel(fast, 0, 'fast', this.host);
+        this.setupChannel(ctrl, 0, 'ctrl', this.host);
+        const prevOpen = ctrl.onopen;
+        const t = setTimeout(() => reject(new Error('Não foi possível entrar na sala. O anfitrião pode estar numa rede que bloqueia a conexão. Tentem de novo ou usem outra rede.')), 20000);
+        ctrl.onopen = () => { clearTimeout(t); prevOpen(); resolve(); };
+        peer.on('error', (err) => { clearTimeout(t); reject(peerError(err)); });
+      });
+    } catch (e) {
+      this.close();
+      throw e;
+    }
+  }
+
+  // ---------- conexão manual (alternativa sem servidor) ----------
   async createInvite(name) {
     this.role = 'host';
     this.myName = name;
@@ -213,10 +350,17 @@ export class Net {
   toHost(msg, fast = false) { this.send(this.host, msg, fast); }
 
   close() {
-    for (const p of this.peers.values()) { try { this.send(p, { t: 'bye' }); p.pc.close(); } catch (e) { /* */ } }
+    for (const p of this.peers.values()) {
+      try { this.send(p, { t: 'bye' }); } catch (e) { /* */ }
+      try { if (p.pc) p.pc.close(); else for (const ch of [p.ctrl, p.fast]) if (ch && ch.close) ch.close(); } catch (e) { /* */ }
+    }
     this.peers.clear();
-    if (this.host) { try { this.host.pc.close(); } catch (e) { /* */ } }
+    if (this.host) {
+      try { if (this.host.pc) this.host.pc.close(); else for (const ch of [this.host.ctrl, this.host.fast]) if (ch && ch.close) ch.close(); } catch (e) { /* */ }
+    }
     this.host = null;
+    if (this.peer) { const pr = this.peer; this.peer = null; setTimeout(() => { try { pr.destroy(); } catch (e) { /* */ } }, 300); }
+    this.roomCode = null;
     this.role = null;
     this.nextId = 1;
   }

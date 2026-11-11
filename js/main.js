@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { settings, QUALITY, saveSettings } from './settings.js';
 import { TouchControls, isTouchDevice } from './touch.js';
 import { setupPWA } from './pwa.js';
+import { Lobby } from './lobby.js';
+import { Chat } from './chat.js';
 import { buildMap, MAPS } from './map.js';
 import { World } from './physics.js';
 import { Nav } from './nav.js';
@@ -68,14 +70,18 @@ class App {
     this.net.onMessage = (peerId, msg) => this.onNetMessage(peerId, msg);
     this.net.onPeerLost = (id, name) => {
       if (this.game.active && this.game.isHost) this.game.removePeer(id, name);
-      else this.toast(`${name} saiu da sala.`);
+      this.lobby.peerLeft(name);
     };
     this.net.onHostLost = () => {
       this.toast('A conexão com o anfitrião foi encerrada.');
       if (this.state !== 'menu') this.quitToMenu();
-      else this.menu.coopStatus('A conexão com o anfitrião foi encerrada.', true);
+      this.lobby.reset();
+      if (this.menu.current === 'screen-coop') this.lobby.status('A sala foi encerrada pelo anfitrião ou a conexão caiu.', true);
     };
+    this.net.onPeersChange = () => this.lobby.syncPeers();
     this.menu = new Menu(this);
+    this.lobby = new Lobby(this);
+    this.chat = new Chat(this);
     this.touchUI = this.touch ? new TouchControls(this) : null;
     this.state = 'menu';
     this.menuT = 0;
@@ -261,10 +267,14 @@ class App {
   // ---------- rede ----------
   onNetMessage(peerId, msg) {
     if (this.net.role === 'host') {
-      if (this.game.active && this.game.coop) this.game.hostHandle(peerId, msg);
+      if (this.lobby.isLobbyMsg(msg.t)) this.lobby.hostHandle(peerId, msg);
+      else if (this.game.active && this.game.coop) this.game.hostHandle(peerId, msg);
       return;
     }
-    if (msg.t === 'start') this.startCoopClient(msg);
+    if (msg.t === 'lobby') this.lobby.onLobby(msg);
+    else if (msg.t === 'chat') this.lobby.onChat(msg);
+    else if (msg.t === 'full') this.lobby.onFull();
+    else if (msg.t === 'start') this.startCoopClient(msg);
     else if (msg.t === 'bye') this.net.lost(0);
     else if (this.game.active && this.game.isClient) this.game.clientHandle(msg);
   }
@@ -284,7 +294,7 @@ class App {
     this.applyAudio();
     // sem um clique do jogador o navegador não libera a captura do mouse
     if (this.noLock) this.lockPointer();
-    else this.pause('A partida cooperativa começou! Clique em Continuar para entrar.');
+    else this.pause('A partida começou! Clique em Continuar para entrar.');
   }
 
   // ---------- tela cheia ----------
@@ -377,13 +387,30 @@ class App {
     this.menu.openLoadout('ingame');
   }
 
+  // Multijogador: depois da partida, todos voltam para a sala sem desconectar.
+  backToRoom() {
+    this.setNightVision(false);
+    this.game.cleanup();
+    this.effects.clear();
+    this.hud.show(false);
+    this.state = 'menu';
+    this.input.enabled = false;
+    this.releasePointer();
+    this.menu.reset('screen-coop');
+    this.lobby.matchOver();
+    this.lobby.open();
+    this.applyAudio();
+  }
+
   restart() {
-    if (this.net.role === 'guest') { this.hud.show(false); this.state = 'menu'; this.menu.reset('screen-coop'); this.menu.openCoop(); return; }
+    if (this.net.active && this.state === 'ended') { this.backToRoom(); return; }
+    if (this.net.role === 'guest') { this.backToRoom(); return; }
     if (this.lastConfig) this.startMatch(this.lastConfig);
   }
 
   quitToMenu() {
     if (this.net.active) this.net.close();
+    if (this.lobby) this.lobby.reset();
     this.setNightVision(false);
     this.game.cleanup();
     this.effects.clear();
@@ -396,6 +423,7 @@ class App {
   }
 
   endMatch(r) {
+    if (this.net.active) this.lobby.matchOver();
     this.state = 'ended';
     this.input.enabled = false;
     this.releasePointer();
@@ -416,6 +444,7 @@ class App {
       if (this.touchUI && this.game.active) this.touchUI.sync(this.game);
       this.game.inputBlocked = false;
       if (this.input.justPressed('KeyX') && this.map.night && this.game.player && this.game.player.alive) this.setNightVision(!this.nv);
+      if (this.net.active && !this.chat.isOpen && (this.input.justPressed('Enter') || this.input.justPressed('KeyT'))) { this.chat.open(); this.input.keys.clear(); }
       if (this.input.justPressed('KeyB')) this.openIngameLoadout();
       else this.game.update(dt);
     } else if (this.state === 'paused' && this.game.active && this.game.coop) {

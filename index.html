@@ -59,6 +59,7 @@
     <div id="center-msg"><div id="center-title"></div><div id="center-sub"></div></div>
     <div id="death-panel" class="hidden"><div class="dp-title"></div><div class="dp-sub"></div></div>
     <div id="hint"></div>
+    <div id="chat"><div id="chat-log"></div><form id="chat-form" class="hidden"><input type="text" id="chat-input" maxlength="120" placeholder="Mensagem (Enter envia, Esc cancela)" autocomplete="off"></form></div>
     <div id="nv-tag" class="hidden"></div>
     <div id="fps" class="hidden"></div>
     <div id="scoreboard" class="hidden"></div>
@@ -78,7 +79,7 @@
         </div>
         <nav class="main-nav">
           <button class="btn primary big" data-action="play">Jogar</button>
-          <button class="btn big" data-action="coop">Cooperativo</button>
+          <button class="btn big" data-action="coop">Multijogador</button>
           <button class="btn big" data-action="quick-training">Treinamento rápido</button>
           <button class="btn big" data-action="profile">Perfil</button>
           <button class="btn big" data-action="loadout">Arsenal</button>
@@ -122,63 +123,93 @@
     </section>
 
 
-    <!-- cooperativo -->
+    <!-- multijogador -->
     <section class="screen" id="screen-coop">
       <div class="panel wide">
-        <header class="panel-head"><h2>Cooperativo</h2><p>Até 4 jogadores na mesma equipe contra bots, por conexão direta entre navegadores. Não precisa de servidor: basta trocar dois códigos por mensagem.</p></header>
-        <div class="coop-top">
-          <label class="opt"><span>Seu nome</span><input type="text" id="coop-name" maxlength="18" placeholder="Seu nome"></label>
-          <div class="coop-roles">
-            <button class="btn primary" id="coop-host">Criar sala</button>
-            <button class="btn" id="coop-join">Entrar numa sala</button>
+        <!-- entrada: criar ou entrar -->
+        <div id="mp-entry">
+          <header class="panel-head"><h2>Multijogador</h2><p>Crie uma sala, envie o código ou o link aos colegas e joguem juntos: até 8 jogadores em dois times de 4, uns contra os outros (PvP) ou lado a lado contra bots (cooperativo).</p></header>
+          <div class="mp-entry">
+            <label class="opt"><span>Seu nome na partida</span><input type="text" id="mp-name" maxlength="18" placeholder="Seu nome" autocomplete="off"></label>
+            <div class="mp-cards">
+              <div class="mp-card">
+                <h3>Criar sala</h3>
+                <p>Você será o anfitrião: escolhe o modo, o mapa e inicia a partida.</p>
+                <button class="btn primary" id="mp-create">Criar sala</button>
+              </div>
+              <div class="mp-card">
+                <h3>Entrar numa sala</h3>
+                <p>Digite o código de 6 caracteres que o anfitrião enviou.</p>
+                <div class="mp-join"><input type="text" id="mp-code" maxlength="7" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="mp-join">Entrar</button></div>
+              </div>
+            </div>
+            <details class="mp-manual">
+              <summary>Conexão alternativa sem servidor (troca manual de códigos)</summary>
+              <p class="mp-hint">Use só se o servidor de salas estiver fora do ar. Funciona entre aparelhos da mesma rede; em redes diferentes pode falhar.</p>
+              <div class="coop-steps">
+                <div class="coop-step">
+                  <h4>Anfitrião</h4>
+                  <button class="btn" id="coop-host">Gerar convite</button>
+                  <textarea id="coop-invite" readonly rows="3" placeholder="O convite aparece aqui"></textarea>
+                  <div class="row"><button class="btn" id="coop-copy-invite">Copiar convite</button></div>
+                  <textarea id="coop-answer" rows="3" placeholder="Cole aqui a resposta do convidado"></textarea>
+                  <div class="row"><button class="btn" id="coop-connect">Conectar</button></div>
+                </div>
+                <div class="coop-step">
+                  <h4>Convidado</h4>
+                  <textarea id="coop-invite-in" rows="3" placeholder="Cole o convite do anfitrião"></textarea>
+                  <div class="row"><button class="btn" id="coop-make-answer">Gerar resposta</button></div>
+                  <textarea id="coop-answer-out" readonly rows="3" placeholder="A resposta aparece aqui"></textarea>
+                  <div class="row"><button class="btn" id="coop-copy-answer">Copiar resposta</button></div>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
 
-        <div id="coop-host-panel" class="coop-panel hidden">
-          <div class="coop-steps">
-            <div class="coop-step">
-              <h4><b>1</b> Envie este convite ao seu amigo</h4>
-              <textarea id="coop-invite" readonly rows="4" placeholder="Gerando convite…"></textarea>
-              <div class="row"><button class="btn" id="coop-copy-invite">Copiar convite</button><button class="btn" id="coop-new-invite">Convidar outro jogador</button></div>
+        <!-- sala de espera -->
+        <div id="mp-lobby" class="hidden">
+          <header class="mp-head">
+            <div>
+              <h2>Sala <span id="mp-room-code">——————</span></h2>
+              <p id="mp-room-sub"></p>
             </div>
-            <div class="coop-step">
-              <h4><b>2</b> Cole aqui a resposta que ele devolver</h4>
-              <textarea id="coop-answer" rows="4" placeholder="Cole o código de resposta (começa com VTX)"></textarea>
-              <div class="row"><button class="btn primary" id="coop-connect">Conectar</button></div>
+            <div class="mp-invite">
+              <button class="btn" id="mp-copy-code">Copiar código</button>
+              <button class="btn" id="mp-copy-link">Copiar link de convite</button>
+              <button class="btn hidden" id="mp-share">Compartilhar</button>
             </div>
-          </div>
-          <div class="coop-bottom">
-            <div class="coop-players"><h4>Jogadores na sala</h4><ul id="coop-list"></ul></div>
-            <div class="coop-opts">
-              <h4>Partida</h4>
-              <label class="opt"><span>Mapa</span><select id="coop-map"></select></label>
-              <label class="opt"><span>Modo</span><select id="coop-mode"><option value="team">Equipe contra equipe (vocês contra bots)</option><option value="training">Treinamento (bots renascem)</option></select></label>
-              <label class="opt"><span>Bots <output id="coop-out-bots"></output></span><input type="range" id="coop-bots" min="2" max="11" step="1"></label>
-              <label class="opt"><span>Dificuldade</span><select id="coop-diff"><option value="recruta">Recruta</option><option value="soldado">Soldado</option><option value="veterano">Veterano</option><option value="elite">Elite</option></select></label>
-              <label class="opt" id="coop-rounds-wrap"><span>Rodadas para vencer <output id="coop-out-rounds"></output></span><input type="range" id="coop-rounds" min="2" max="10" step="1"></label>
+          </header>
+          <div class="mp-body">
+            <div class="mp-teams">
+              <div class="mp-team" data-team="A"><h4><span>Vanguarda</span><em id="mp-count-A"></em></h4><ul id="mp-list-A"></ul><button class="btn mp-jointeam" data-team="A">Entrar na Vanguarda</button></div>
+              <div class="mp-team" data-team="B"><h4><span>Sentinela</span><em id="mp-count-B"></em></h4><ul id="mp-list-B"></ul><button class="btn mp-jointeam" data-team="B">Entrar na Sentinela</button></div>
+            </div>
+            <div class="mp-side">
+              <div class="mp-settings">
+                <h4>Partida <small id="mp-settings-note"></small></h4>
+                <div class="seg" id="mp-mode"><button data-v="pvp">PvP · times</button><button data-v="coop">Cooperativo · contra bots</button></div>
+                <label class="opt"><span>Formato</span><select id="mp-format"><option value="team">Rodadas por eliminação</option><option value="training">Treinamento (bots renascem)</option></select></label>
+                <label class="opt"><span>Mapa</span><select id="mp-map"></select></label>
+                <label class="opt" id="mp-rounds-wrap"><span>Rodadas para vencer <output id="mp-out-rounds"></output></span><input type="range" id="mp-rounds" min="2" max="10" step="1"></label>
+                <label class="opt"><span>Dificuldade dos bots</span><select id="mp-diff"><option value="recruta">Recruta</option><option value="soldado">Soldado</option><option value="veterano">Veterano</option><option value="elite">Elite</option></select></label>
+                <label class="opt" id="mp-enemy-wrap"><span>Bots inimigos <output id="mp-out-enemy"></output></span><input type="range" id="mp-enemy" min="1" max="8" step="1"></label>
+                <label class="opt check"><input type="checkbox" id="mp-fill"><span id="mp-fill-label">Completar times com bots</span></label>
+              </div>
+              <div class="mp-chat">
+                <div class="mp-chat-log" id="mp-chat-log" aria-live="polite"></div>
+                <form id="mp-chat-form"><input type="text" id="mp-chat-input" maxlength="120" placeholder="Mensagem para a sala" autocomplete="off"><button class="btn" type="submit">Enviar</button></form>
+              </div>
             </div>
           </div>
         </div>
 
-        <div id="coop-guest-panel" class="coop-panel hidden">
-          <div class="coop-steps">
-            <div class="coop-step">
-              <h4><b>1</b> Cole o convite do anfitrião</h4>
-              <textarea id="coop-invite-in" rows="4" placeholder="Cole o convite (começa com VTX)"></textarea>
-              <div class="row"><button class="btn primary" id="coop-make-answer">Gerar resposta</button></div>
-            </div>
-            <div class="coop-step">
-              <h4><b>2</b> Devolva esta resposta ao anfitrião</h4>
-              <textarea id="coop-answer-out" readonly rows="4" placeholder="A resposta aparece aqui"></textarea>
-              <div class="row"><button class="btn" id="coop-copy-answer">Copiar resposta</button></div>
-            </div>
-          </div>
-        </div>
         <p class="coop-status" id="coop-status"></p>
         <footer class="panel-foot">
           <button class="btn" id="coop-leave">Voltar</button>
-          <div class="grow"></div>
           <button class="btn" data-action="loadout">Arsenal</button>
+          <div class="grow"></div>
+          <button class="btn hidden" id="mp-ready">Estou pronto</button>
           <button class="btn primary hidden" id="coop-start">Iniciar partida</button>
         </footer>
       </div>
@@ -379,6 +410,7 @@
   <div id="loading"><div class="ld-mark"></div><p>Montando o Distrito Ferrugem…</p></div>
   <noscript><p class="noscript">Este jogo requer JavaScript habilitado.</p></noscript>
 </div>
+<script src="vendor/peerjs.min.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

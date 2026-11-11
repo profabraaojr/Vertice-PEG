@@ -39,6 +39,7 @@ export class TouchControls {
       <div class="t-zone t-look" data-zone="look"></div>
       <div class="t-stick hidden"><div class="t-knob"></div></div>
       <div class="t-top">
+        <button class="t-sbtn hidden" data-act="chat" aria-label="Chat">CHAT</button>
         <button class="t-sbtn" data-act="nv" aria-label="Visão noturna">NV</button>
         <button class="t-sbtn" data-act="loadout" aria-label="Seleção de armas">ARMAS</button>
         <button class="t-sbtn" data-act="board" aria-label="Placar">PLACAR</button>
@@ -60,6 +61,7 @@ export class TouchControls {
     this.stickEl = ui.querySelector('.t-stick');
     this.knob = ui.querySelector('.t-knob');
     this.nvBtn = ui.querySelector('[data-act="nv"]');
+    this.chatBtn = ui.querySelector('[data-act="chat"]');
     this.adsBtn = ui.querySelector('[data-act="ads"]');
     this.crouchBtn = ui.querySelector('[data-act="crouch"]');
     const opts = { passive: false };
@@ -81,6 +83,7 @@ export class TouchControls {
     const night = !!this.app.map.night;
     this.nvBtn.classList.toggle('hidden', !night);
     this.nvBtn.classList.toggle('on', !!this.app.nv);
+    this.chatBtn.classList.toggle('hidden', !this.app.net.active);
     const p = game.player;
     if (p && p.weapon) {
       const d = p.weapon.def;
@@ -223,6 +226,7 @@ export class TouchControls {
       case 'reload': inp.pressed.add('KeyR'); hold('noop'); break;
       case 'swap': inp.mouse.wheel += 1; this.setAds(false); hold('noop'); break;
       case 'nv': inp.pressed.add('KeyX'); hold('noop'); break;
+      case 'chat': hold('noop'); setTimeout(() => this.app.chat.open(), 0); break;
       case 'loadout': inp.pressed.add('KeyB'); hold('noop'); break;
       case 'board': inp.keys.add('Tab'); hold('board'); break;
       case 'fs': this.app.toggleFullscreen(); hold('noop'); break;
