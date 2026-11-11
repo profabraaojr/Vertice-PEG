@@ -1,0 +1,25 @@
+# Publicação automática: a cada envio para a branch main, copia o conteúdo
+# para a branch gh-pages, que é a fonte do GitHub Pages deste repositório.
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar-pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Atualizar a branch gh-pages com a main
+        run: git push --force origin HEAD:gh-pages

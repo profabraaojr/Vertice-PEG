@@ -2,6 +2,16 @@
 
 Jogo de tiro em primeira pessoa com rodadas, bots, cinco categorias de armas e um mapa 3D original (*Distrito Ferrugem*). Foi escrito em HTML, CSS e JavaScript, com renderização WebGL via Three.js. Texturas e sons são gerados por código: o projeto não depende de imagens nem de arquivos de áudio externos e funciona sem internet. Só as fontes vêm do Google Fonts; se elas não carregarem, o navegador usa fontes do sistema.
 
+## Jogar online
+
+O jogo está publicado no GitHub Pages: **https://profabraaojr.github.io/Vertice-PEG/**
+
+Nesse endereço tudo funciona, inclusive o modo cooperativo. Não é preciso instalar nada: basta abrir o link no Chrome, Edge ou Firefox de um computador com teclado e mouse.
+
+### Atualizar o jogo publicado
+
+Envie as alterações para a branch `main`. O fluxo `.github/workflows/publicar.yml` copia a `main` para a branch `gh-pages`, de onde o GitHub Pages publica o site. A nova versão aparece no endereço em um ou dois minutos. Se o navegador ainda mostrar a versão antiga, recarregue com Ctrl+F5.
+
 ## Como executar
 
 ### Opção 1: arquivo único (mais simples)
