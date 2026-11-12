@@ -225,10 +225,15 @@ export class ViewModel {
 
   // Aplica a camuflagem do perfil às mangas; reconstrói os modelos já criados.
   setLook(look) {
-    const key = look ? look.camo : '';
+    const key = look ? (look.uniform || look.camo) : '';
     if (this.lookKey === key) return;
     this.lookKey = key;
-    SLEEVE = look ? new THREE.MeshStandardMaterial({ map: camoTexture(look.camo), roughness: 0.92, envMap: gunEnvironment(), envMapIntensity: 0.25 }) : null;
+    if (look && look.uniform === 'swat') {
+      // farda da unidade tática (modo história): azul-marinho liso
+      SLEEVE = new THREE.MeshStandardMaterial({ color: 0x1c2532, roughness: 0.9, envMap: gunEnvironment(), envMapIntensity: 0.25 });
+    } else {
+      SLEEVE = look ? new THREE.MeshStandardMaterial({ map: camoTexture(look.camo), roughness: 0.92, envMap: gunEnvironment(), envMapIntensity: 0.25 }) : null;
+    }
     for (const e of this.models.values()) e.holder.removeFromParent();
     this.models.clear();
     if (this.def) { const d = this.def; this.current = null; this.setWeapon(d, false); }

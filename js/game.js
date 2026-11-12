@@ -1,5 +1,6 @@
 // Núcleo da partida: modos, rodadas, disparos, dano, renascimento e câmera.
 import * as THREE from 'three';
+import { StoryMission, missionById, AGENT } from './story.js';
 import { Player } from './player.js';
 import { Bot } from './bot.js';
 import { TEAMS, FFA_COLORS, BOT_NAMES, WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS } from './config.js';
@@ -82,8 +83,27 @@ export class Game {
     this.coop = !!(this.net && this.net.role === 'host' && guests.length);
 
     const pTeam = mode === 'ffa' ? 'P' : room && mode === 'team' ? room.hostTeam : 'A';
-    this.player = new Player({ id: 0, name: playerName(), team: pTeam, color: mode === 'ffa' ? FFA_COLORS[0] : TEAMS[pTeam].color });
-    this.player.setLoadout(settings.loadout.primary, settings.loadout.secondary, mode === 'training', settings.loadout.melee);
+    const story = mode === 'story';
+    this.player = new Player({ id: 0, name: story ? AGENT.name : playerName(), team: pTeam, color: mode === 'ffa' ? FFA_COLORS[0] : TEAMS[pTeam].color });
+    if (story) this.player.setLoadout('kestrel', 'vp9', false, 'katana'); // equipamento padrão da unidade
+    else this.player.setLoadout(settings.loadout.primary, settings.loadout.secondary, mode === 'training', settings.loadout.melee);
+    if (story) {
+      // modo história: a missão monta criminosos, reféns e objetivos
+      this.story = new StoryMission(this, missionById(this.config.mission));
+      this.story.setup();
+      this.remotes = [];
+      this.combatants = [this.player, ...this.bots];
+      this.viewmodel.setWeapon(this.player.weapon.def, false);
+      this.effects.clear();
+      this.phase = 'live';
+      this.phaseT = 0;
+      this.story.spawnAll();
+      this.announce(`MISSÃO ${this.story.def.n}`, this.story.def.title, 3.2, null, 'roundStart');
+      this.active = true;
+      this.paused = false;
+      this.hud.setupMatch(this);
+      return;
+    }
 
     // os bots levam os nomes (e a aparência salva) dos alunos que não estão jogando
     const taken = new Set([activeProfile(), ...guests.map((g) => g.name)]);
@@ -133,6 +153,7 @@ export class Game {
   }
 
   cleanup() {
+    if (this.story) { this.story.dispose(); this.story = null; }
     for (const c of this.combatants) if (!c.isPlayer && c.model) this.scene.remove(c.model.root);
     for (const b of this.bots) this.scene.remove(b.model.root);
     this.coop = false;
@@ -192,6 +213,7 @@ export class Game {
   }
 
   results() {
+    if (this.story) return this.story.results();
     const mode = this.config.mode;
     const rows = this.combatants.slice().sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
     const p = this.player;
@@ -266,7 +288,7 @@ export class Game {
     if (this.isClient) return this.clientSetLoadout(primary, secondary, melee);
     const p = this.player;
     const mode = this.config.mode;
-    const immediate = mode === 'training' || (mode === 'team' && this.phase === 'freeze') || (mode === 'ffa' && p.alive && this.time - (p.spawnTime || 0) < 6);
+    const immediate = mode === 'training' || mode === 'story' || (mode === 'team' && this.phase === 'freeze') || (mode === 'ffa' && p.alive && this.time - (p.spawnTime || 0) < 6);
     if (immediate && p.alive) {
       p.setLoadout(primary, secondary, mode === 'training', melee);
       p.resetView();
@@ -283,7 +305,11 @@ export class Game {
   }
 
   // ---------- regras ----------
-  isEnemy(a, b) { return a !== b && a.team !== b.team; }
+  isEnemy(a, b) {
+    if (a === b) return false;
+    if (this.story) return this.story.isEnemy(a, b);
+    return a.team !== b.team;
+  }
   canMove() { return this.phase !== 'freeze' && this.phase !== 'matchEnd'; }
   canShoot() { return this.phase === 'live' || this.phase === 'roundEnd'; }
 
@@ -301,6 +327,8 @@ export class Game {
   }
 
   pickRoamGoal(bot) {
+    const sg = this.story && this.story.roamGoal(bot);
+    if (sg) return sg;
     const mode = this.config.mode;
     const nav = this.nav;
     let anchor = null;
@@ -379,6 +407,11 @@ export class Game {
     }
     for (const h of struck) {
       _end.copy(o).addScaledVector(d, h.t);
+      if (h.c.isHostage) {
+        this.effects.blood(_end, d, false);
+        if (this.story) this.story.hostageHit(shooter, h.c);
+        continue;
+      }
       if (this.isEnemy(shooter, h.c)) {
         const falloff = h.t <= def.range ? 1 : Math.max(def.minFalloff, 1 - (h.t - def.range) / (def.range * 1.5));
         const mult = h.part === 'head' ? def.headMult : h.part === 'legs' ? def.legMult : 1;
@@ -565,6 +598,7 @@ export class Game {
 
   applyDamage(victim, dmg, attacker, part, dir, def) {
     if (!victim.alive || victim.spawnProtect > 0) return;
+    if (this.story) { dmg = this.story.filterDamage(victim, dmg, attacker); if (dmg <= 0) return; }
     dmg = Math.max(1, Math.round(dmg));
     const dealt = Math.min(dmg, victim.health);
     victim.health -= dmg;
@@ -614,7 +648,8 @@ export class Game {
       victim.zoomLevel = 0;
       this.hud.onDeath(attacker, def, this);
     }
-    victim.respawnTimer = mode === 'team' ? Infinity : mode === 'ffa' ? 3 : (victim.isPlayer || victim.isRemote ? 2.5 : 2);
+    if (this.story) this.story.onKill(victim, attacker);
+    victim.respawnTimer = mode === 'team' || mode === 'story' ? Infinity : mode === 'ffa' ? 3 : (victim.isPlayer || victim.isRemote ? 2.5 : 2);
     if (victim.isRemote && this.isHost) this.net.sendTo(victim.peerId, { t: 'died', k: attacker ? attacker.id : -1, w: def ? def.id : null, rt: victim.respawnTimer === Infinity ? null : victim.respawnTimer });
     if (mode === 'team') this.checkRoundEnd();
     if (mode === 'ffa' && attacker && attacker.kills >= this.config.scoreLimit) this.endMatch();
@@ -677,6 +712,7 @@ export class Game {
       if (b.alive) b.updateWeapons(dt);
       b.update(dt, this);
     }
+    if (this.story) this.story.update(dt);
     for (const c of this.combatants) {
       if (c.pendingMelee) {
         c.pendingMelee.t -= dt;

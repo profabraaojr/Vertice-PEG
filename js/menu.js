@@ -4,6 +4,8 @@ import { WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS, MODE_INFO, weaponStats,
 import { EMBEDDED, BLOCKED_MSG } from './net.js';
 import { MAPS, MAP_IDS } from './map.js';
 import { pwa, isStandalone, platform, promptInstall } from './pwa.js';
+import { CAMPAIGN, missionById, storyProgress } from './story.js';
+import { isTouchDevice } from './touch.js';
 import { STUDENTS, SCHOOL, CLASSES, SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, getLook, setLook, defaultLook, activeProfile, activeLook, setActiveProfile, camoCanvas, lookColors } from './profiles.js';
 
 const $ = (id) => document.getElementById(id);
@@ -63,6 +65,8 @@ export class Menu {
       case 'play': this.show('screen-play'); break;
       case 'profile': this.openProfiles(); break;
       case 'install': this.openInstall(); break;
+      case 'story': if (app.state === 'ended') app.quitToMenu(); this.openStory(); break;
+      case 'story-start': this.startStory(); break;
       case 'coop': this.openCoop(); break;
       case 'quick-training': app.startMatch({ map: settings.match.map, mode: 'training', bots: 6, difficulty: settings.match.difficulty, botsShoot: true, timeLimit: 0, scoreLimit: 0, rounds: 0 }); break;
       case 'loadout': this.openLoadout('main'); break;
@@ -300,6 +304,13 @@ export class Menu {
     for (const [id, key] of this.checks) {
       $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; this.app.applySettings(); saveSettings(); });
     }
+    $('set-control').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+      settings.controlMode = b.dataset.v;
+      saveSettings();
+      const touch = this.app.applyControlMode();
+      this.syncSettings();
+      this.app.toast(touch ? 'Controles de toque ativados.' : 'Modo PC ativado: teclado e mouse.');
+    }));
     $('set-quality').addEventListener('change', (e) => { settings.quality = e.target.value; this.app.applySettings(); saveSettings(); });
     $('set-ch-color').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       settings.crosshairColor = b.dataset.v; this.syncSettings(); this.app.applySettings(); saveSettings();
@@ -311,7 +322,18 @@ export class Menu {
     for (const [id, out, key, fmt] of this.ranges) { $(id).value = settings[key]; $(out).textContent = fmt(settings[key]); }
     for (const [id, key] of this.checks) $(id).checked = !!settings[key];
     $('set-quality').value = settings.quality;
+    const cm = ['auto', 'touch', 'pc'].includes(settings.controlMode) ? settings.controlMode : 'auto';
+    $('set-control').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.v === cm));
+    $('set-control-note').textContent = cm === 'auto'
+      ? `Detectado: ${isTouchDevice() ? 'aparelho de toque (controles na tela)' : 'computador (teclado e mouse)'}.`
+      : cm === 'touch' ? 'Controles na tela, sem captura do mouse.' : 'Teclado e mouse, sem controles na tela.';
     $('set-ch-color').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.v === settings.crosshairColor));
+  }
+
+  updateFoot() {
+    $('main-foot').textContent = this.app.touch
+      ? 'Toque em Jogar para entrar em tela cheia · use os controles na tela'
+      : 'Clique em jogar para capturar o mouse · Esc libera o cursor e pausa';
   }
 
   // ---------- instalação ----------
@@ -330,7 +352,7 @@ export class Menu {
       refresh();
     });
     $('install-url').textContent = location.href.split('?')[0].split('#')[0];
-    if (this.app.touch) $('main-foot').textContent = 'Toque em Jogar para entrar em tela cheia · use os controles na tela';
+    this.updateFoot();
     refresh();
   }
 
@@ -489,7 +511,82 @@ export class Menu {
     this.reset('screen-pause');
   }
 
+  // ---------- modo história ----------
+  openStory() {
+    const prog = storyProgress();
+    const list = $('story-list');
+    list.innerHTML = '';
+    if (!this.storySel || !missionById(this.storySel).ready) this.storySel = 'm1';
+    if (!this.storyDiff) this.storyDiff = 'soldado';
+    CAMPAIGN.forEach((m) => {
+      const b = document.createElement('button');
+      b.className = `story-card${m.id === this.storySel ? ' active' : ''}${m.ready ? '' : ' soon'}`;
+      const pr = prog[m.id];
+      b.innerHTML = '<small></small><b></b><span></span>';
+      b.querySelector('small').textContent = `Missão ${m.n} · ${m.tag}`;
+      b.querySelector('b').textContent = m.title;
+      b.querySelector('span').textContent = !m.ready ? 'Em produção' : pr && pr.done ? `${'★'.repeat(pr.stars)}${'☆'.repeat(3 - pr.stars)} · recorde ${pr.best}` : 'Disponível';
+      b.addEventListener('click', () => { this.storySel = m.id; this.openStory(); });
+      list.appendChild(b);
+    });
+    const m = missionById(this.storySel);
+    $('sb-tag').textContent = `Missão ${m.n} · ${m.tag}`;
+    $('sb-title').textContent = m.title;
+    const t = $('sb-text');
+    t.innerHTML = '';
+    m.brief.forEach((line) => { const p = document.createElement('p'); p.textContent = line; t.appendChild(p); });
+    $('sb-controls').textContent = m.ready ? m.controls : 'Esta missão está em produção e chega numa próxima atualização.';
+    $('sb-diff-wrap').classList.toggle('hidden', !m.ready);
+    $('sb-start').classList.toggle('hidden', !m.ready);
+    $('sb-diff').querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.v === this.storyDiff);
+      b.onclick = () => { this.storyDiff = b.dataset.v; this.openStory(); };
+    });
+    const pr = prog[m.id];
+    $('sb-best').textContent = pr && pr.done ? `Melhor resultado: ${pr.best} pontos · ${'★'.repeat(pr.stars)}${'☆'.repeat(3 - pr.stars)}` : '';
+    if (this.current !== 'screen-story') this.show('screen-story');
+  }
+
+  startStory() {
+    const m = missionById(this.storySel || 'm1');
+    if (!m || !m.ready) return;
+    this.app.startMatch({ mode: 'story', mission: m.id, map: m.map, difficulty: this.storyDiff || 'soldado', bots: 0, timeLimit: 0, scoreLimit: 0, rounds: 0, botsShoot: true });
+  }
+
+  showStoryEnd(r) {
+    const st = r.story;
+    $('end-title').textContent = r.title;
+    $('end-title').style.color = r.color || '';
+    $('end-sub').textContent = st.success ? `${r.subtitle} · ${'★'.repeat(st.stars)}${'☆'.repeat(3 - st.stars)}` : r.subtitle;
+    const box = $('end-stats');
+    box.innerHTML = '';
+    [['Pontuação', st.score], ['Estrelas', `${st.stars}/3`], ['Precisão', `${r.acc}%`], ['Tempo', `${Math.round(r.time)} s`]].forEach(([k, v]) => {
+      const d = document.createElement('div'); d.innerHTML = '<b></b><span></span>'; d.querySelector('b').textContent = v; d.querySelector('span').textContent = k; box.appendChild(d);
+    });
+    const board = $('end-board');
+    board.innerHTML = '';
+    const t = document.createElement('table');
+    t.className = 'story-score';
+    t.innerHTML = '<thead><tr><th>Relatório da operação</th><th>Qtd.</th><th>Pontos</th></tr></thead>';
+    const tb = document.createElement('tbody');
+    for (const [label, n, pts] of st.lines) {
+      const tr = document.createElement('tr');
+      [label, n, pts > 0 ? `+${pts}` : `${pts}`].forEach((v) => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+      if (pts < 0) tr.className = 'neg';
+      tb.appendChild(tr);
+    }
+    t.appendChild(tb);
+    board.appendChild(t);
+    if (st.success && st.isBest) { const p = document.createElement('p'); p.className = 'story-best'; p.textContent = 'Novo recorde nesta missão!'; board.appendChild(p); }
+    $('end-story').classList.remove('hidden');
+    $('end-restart').textContent = st.success ? 'Repetir missão' : 'Tentar de novo';
+    this.reset('screen-end');
+  }
+
   showEnd(r) {
+    $('end-story').classList.add('hidden');
+    $('end-restart').textContent = 'Jogar novamente';
+    if (r.story) { this.showStoryEnd(r); return; }
     $('end-title').textContent = r.title;
     $('end-title').style.color = r.color || '';
     $('end-sub').textContent = r.subtitle;

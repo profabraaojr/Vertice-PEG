@@ -19,6 +19,16 @@ No celular, o jogo detecta a tela de toque e mostra controles na tela. No layout
 
 Ao tocar em Jogar, o jogo entra em tela cheia. Na primeira abertura no celular, a qualidade gráfica começa em Média para manter a fluidez; a sensibilidade da mira por arraste fica em Configurações → Controles.
 
+#### Modo de controle
+
+Em **Configurações → Controles → Modo de controle** há três opções:
+
+- **Automático** (padrão): usa controles na tela apenas quando o aparelho não tem mouse nem trackpad. Computadores que informam suporte a toque sem ter tela sensível continuam no modo de teclado e mouse;
+- **Controles de toque**: sempre mostra os controles na tela, sem capturar o mouse;
+- **Modo PC**: sempre usa teclado e mouse, sem controles na tela (útil também em tablets com teclado e mouse).
+
+A troca vale na hora, inclusive com a partida pausada, e fica salva no aparelho.
+
 #### Personalizar controles
 
 Em **Configurações → Controles → Personalizar controles** há um editor com uma simulação do celular:
@@ -74,6 +84,25 @@ npm run build
 Requer Node.js 18 ou mais recente. O script `build.mjs` empacota os módulos com esbuild e grava `dist/vertice.html`.
 
 Navegadores recomendados: Chrome, Edge ou Firefox atualizados. Clique na tela para capturar o mouse; a tecla Esc libera o cursor e pausa a partida.
+
+## Modo História
+
+Campanha individual do **Agente Falcão**, da unidade tática, com farda própria, contra a organização criminosa **Crakem**, liderada pelo terrorista **Vugo**. Os criminosos usam codinomes fictícios; os perfis dos alunos não aparecem como criminosos.
+
+| Missão | Cenário | Situação |
+|---|---|---|
+| 1. Resgate no Distrito Ferrugem | Distrito Ferrugem (dia) | disponível |
+| 2. Contagem regressiva (atentado a bomba) | Ferrugem à Noite | em produção |
+| 3. A caçada a Vugo (captura) | Selva Esmeralda | em produção |
+| 4. Olho no alto (tiro de precisão) | Ruínas de Aruanã | em produção |
+
+Na Missão 1, três reféns estão no armazém nordeste. É preciso libertá-los, levá-los até a viatura no pátio e neutralizar os sequestradores. Se o alarme soar, o agente tem 90 segundos para libertar todos os reféns.
+
+- **Voz de prisão:** mire num suspeito e pressione **E** (no celular, o botão **AÇÃO**). A chance de rendição é maior se ele estiver desprevenido, ferido, perto e sem comparsas ao lado. Criminosos muito feridos também podem se render sozinhos;
+- **Algemar e libertar:** aproxime-se e **segure E**;
+- **Pontuação:** refém salvo 500, criminoso preso 400, rendido sem algemas 200, abatido 100, missão sem alarme 600, bônus de tempo; atirar em quem já se rendeu tira 500 ("uso excessivo da força"). A missão vale até três estrelas, e o melhor resultado fica salvo.
+
+Falhas: o agente ser abatido, um refém ser atingido pelo agente ou o tempo do alarme acabar.
 
 ## Perfis
 
@@ -142,6 +171,7 @@ Durante a partida, **Enter** ou **T** abre o chat (no celular, o botão CHAT). N
 | 1, 2, 3, Q, roda do mouse | Arma principal, secundária, espada, última arma |
 | Com a espada | Esquerdo corta, direito desfere golpe pesado |
 | F | Inspecionar a arma |
+| E | Modo história: voz de prisão (mirando) · segurar para algemar ou libertar refém |
 | X | Óculos de visão noturna (mapa noturno) |
 | B | Seleção de armas |
 | Tab | Placar |
@@ -189,6 +219,8 @@ js/profiles.js      perfis dos alunos, opções de aparência e camuflagens
 js/touch.js         controles de toque (joystick, mira por arraste, botões) a partir do layout ativo
 js/touchlayout.js   comandos, layouts prontos, perfis, geometria e exportação dos controles de toque
 js/controleditor.js editor "Personalizar controles"
+js/story.js         modo história: campanha, motor de missões, rendição, prisão, reféns e relatório
+js/hands.js         mãos enluvadas articuladas da visão em primeira pessoa
 js/pwa.js           instalação como aplicativo e registro do service worker
 js/lobby.js         sala de espera: times, pronto, configurações do anfitrião e chat
 js/chat.js          chat durante a partida

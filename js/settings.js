@@ -20,6 +20,7 @@ const DEFAULTS = {
   musicInGame: false,
   sensitivity: 1.0,
   touchSens: 1.0,
+  controlMode: 'auto', // 'auto' | 'touch' | 'pc'
   scopeSens: 0.85,
   invertY: false,
   crosshairColor: '#6dff9e',

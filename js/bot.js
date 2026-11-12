@@ -11,7 +11,7 @@ export class Bot extends Combatant {
   constructor(opts, difficulty) {
     super(opts);
     this.diff = DIFFICULTY[difficulty] || DIFFICULTY.soldado;
-    this.model = new CharacterModel(opts.color, opts.look || null);
+    this.model = new CharacterModel(opts.color, opts.look || null, opts.style || null);
     this.state = 'roam';
     this.path = null;
     this.pathIdx = 0;
@@ -132,8 +132,10 @@ export class Bot extends Combatant {
       if (this.target && game.time - this.lastSeen > 0.7) {
         this.target = null;
         if (this.state === 'engage') {
-          this.state = 'chase';
-          this.setPath(game, this.lastKnown.x, this.lastKnown.z);
+          if (this.hold) { this.state = 'search'; this.searchT = 4; } else {
+            this.state = 'chase';
+            this.setPath(game, this.lastKnown.x, this.lastKnown.z);
+          }
         }
       }
     }
@@ -142,6 +144,8 @@ export class Bot extends Combatant {
   hear(pos, source, game) {
     if (!this.alive || this.state === 'engage' || this.state === 'retreat') return;
     if (!game.isEnemy(this, source)) return;
+    // guardas fixos (modo história) não abandonam o posto: só se viram para o barulho
+    if (this.hold) { this.alertYaw = Math.atan2(-(pos.x - this.pos.x), -(pos.z - this.pos.z)); this.alertT = 2; this.state = 'search'; this.searchT = 4; return; }
     if (this.state === 'chase' && Math.random() < 0.6) return;
     this.lastKnown.copy(pos);
     this.state = 'chase';
@@ -155,10 +159,13 @@ export class Bot extends Combatant {
       this.alertYaw = Math.atan2(-(attacker.pos.x - this.pos.x), -(attacker.pos.z - this.pos.z));
       this.alertT = 0.8;
       if (this.state !== 'engage') {
-        this.state = 'chase';
-        this.setPath(game, attacker.pos.x, attacker.pos.z);
+        if (this.hold) { this.state = 'search'; this.searchT = 4; } else {
+          this.state = 'chase';
+          this.setPath(game, attacker.pos.x, attacker.pos.z);
+        }
       }
     }
+    if (this.hold) return;
     if (this.health < 35 && this.state !== 'retreat' && Math.random() < 0.4) {
       const a = attacker.pos;
       const cell = game.nav.randomCell(([cx, cy]) => {
@@ -175,6 +182,7 @@ export class Bot extends Combatant {
   // ---------- atualização ----------
   update(dt, game) {
     if (!this.alive) { this.model.update(dt, this); return; }
+    if (this.ctrl && this.ctrl(dt, game)) return; // controle externo (modo história: reféns e rendidos)
     const d = this.diff;
     const w = this.weapon;
     this.think -= dt;

@@ -529,3 +529,46 @@ textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11p
   .ctl-side { max-height: calc(100vh - 130px); overflow: auto; }
   .ctl-log { max-height: 60px; }
 }
+
+/* ---------------- modo história ---------------- */
+.story-grid { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 18px; align-items: start; }
+.story-list { display: flex; flex-direction: column; gap: 8px; }
+.story-card { text-align: left; padding: 10px 12px; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.03); cursor: pointer; display: flex; flex-direction: column; gap: 3px; font-family: var(--head); color: var(--text); }
+.story-card small { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.story-card b { font-size: 16px; letter-spacing: 0.03em; }
+.story-card span { font-size: 12px; color: var(--muted); }
+.story-card.active { border-color: var(--accent); background: rgba(255, 138, 61, 0.1); box-shadow: inset 3px 0 0 var(--accent); }
+.story-card.soon { opacity: 0.6; }
+.story-brief { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); min-height: 240px; }
+.story-brief h3 { margin: 0; font-family: var(--head); font-size: 22px; letter-spacing: 0.04em; }
+.story-brief p { margin: 0; font-size: 14px; line-height: 1.5; }
+.sb-tag { font-family: var(--head); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.sb-controls { color: var(--accent-2); font-size: 13px !important; }
+.sb-best { color: #6dff9e; font-family: var(--head); }
+.story-score { width: 100%; border-collapse: collapse; font-size: 14px; }
+.story-score th, .story-score td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.story-score td:nth-child(n+2), .story-score th:nth-child(n+2) { text-align: right; font-family: var(--head); }
+.story-score tr.neg td { color: #ff8080; }
+.story-best { color: #6dff9e; font-family: var(--head); letter-spacing: 0.06em; margin-top: 10px; }
+@media (max-width: 760px) { .story-grid { grid-template-columns: 1fr; } }
+
+/* HUD da missão */
+body.story #topbar, body.story #train-stats, body.story #scoreboard { display: none !important; }
+#story-hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--head); }
+.st-obj { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); top: 230px; width: 290px; padding: 10px 12px; background: rgba(8, 10, 13, 0.55); border-left: 3px solid var(--accent); }
+.st-obj h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.st-obj ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.st-obj li::before { content: '◇ '; color: var(--muted); }
+.st-obj li.done { color: #6dff9e; text-decoration: line-through; text-decoration-color: rgba(109, 255, 158, 0.5); }
+.st-obj li.done::before { content: '◆ '; color: #6dff9e; }
+.st-alarm { margin-top: 8px; padding: 4px 8px; background: rgba(200, 40, 40, 0.75); color: #fff; font-size: 14px; letter-spacing: 0.1em; animation: stBlink 0.8s steps(2) infinite; }
+@keyframes stBlink { 50% { opacity: 0.55; } }
+.st-radio { position: absolute; left: 50%; bottom: 130px; transform: translateX(-50%); max-width: min(720px, 80vw); padding: 8px 14px; background: rgba(8, 10, 13, 0.7); border-top: 2px solid var(--accent-2); font-size: 15px; text-align: center; text-shadow: 0 1px 2px #000; }
+.st-radio b { color: var(--accent-2); margin-right: 6px; letter-spacing: 0.05em; }
+.st-prompt { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); padding: 6px 12px; background: rgba(8, 10, 13, 0.7); border: 1px solid rgba(255, 255, 255, 0.25); font-size: 14px; text-align: center; min-width: 220px; }
+.st-prompt i { display: block; height: 3px; margin-top: 5px; background: rgba(255, 255, 255, 0.15); }
+.st-prompt em { display: block; height: 100%; width: 0; background: #6dff9e; }
+.st-wp { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; color: #ffd166; text-shadow: 0 1px 2px #000; }
+.st-wp i { width: 12px; height: 12px; border: 2px solid #ffd166; transform: rotate(45deg); }
+body.touch .st-obj { top: calc(110px + env(safe-area-inset-top, 0px)); width: 220px; font-size: 12px; padding: 6px 8px; transform: scale(0.9); transform-origin: top left; }
+body.touch .st-radio { bottom: 70px; font-size: 13px; }

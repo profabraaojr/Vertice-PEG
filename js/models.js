@@ -41,18 +41,25 @@ export { buildGun } from './guns.js';
 // ---------- personagem ----------
 export class CharacterModel {
   // look (opcional): aparência de um perfil. Sem ele, o personagem usa capacete e máscara.
-  constructor(color, look = null) {
+  // style (modo história): 'swat' (farda da unidade), 'crim' (Crakem) ou 'civil' (refém)
+  //   com opcional shirt/pants para civis.
+  constructor(color, look = null, style = null) {
     this.root = new THREE.Group();
     this.body = new THREE.Group();
     this.root.add(this.body);
+    this.style = style ? style.kind : null;
+    const kind = this.style;
     const team = stdMat(color, 0.7, 0.1);
     const teamDark = stdMat(new THREE.Color(color).multiplyScalar(0.45).getHex(), 0.8, 0.1);
     const boots = stdMat(0x1d1b18, 0.8, 0.1);
     const gear = stdMat(0x23262a, 0.6, 0.3);
     const lc = look ? lookColors(look) : null;
     // a farda mantém o corte padrão; só a estampa de camuflagem muda
-    const fabric = look ? new THREE.MeshStandardMaterial({ map: camoTexture(look.camo), roughness: 0.95 }) : stdMat(0x3a3d36, 0.95, 0);
-    const pants = look ? new THREE.MeshStandardMaterial({ map: camoTexture(look.camo), color: 0xd8d8d8, roughness: 0.95 }) : stdMat(0x4a4538, 0.95, 0);
+    let fabric = look ? new THREE.MeshStandardMaterial({ map: camoTexture(look.camo), roughness: 0.95 }) : stdMat(0x3a3d36, 0.95, 0);
+    let pants = look ? new THREE.MeshStandardMaterial({ map: camoTexture(look.camo), color: 0xd8d8d8, roughness: 0.95 }) : stdMat(0x4a4538, 0.95, 0);
+    if (kind === 'swat') { fabric = stdMat(0x1c2430, 0.92, 0); pants = stdMat(0x1a212c, 0.92, 0); }
+    if (kind === 'crim') { fabric = stdMat(0x2a2b2e, 0.95, 0); pants = stdMat(0x27324a, 0.9, 0); }
+    if (kind === 'civil') { fabric = stdMat(style.shirt || 0x7a8fa6, 0.9, 0); pants = stdMat(style.pants || 0x34465e, 0.9, 0); }
     const skin = stdMat(lc ? lc.skin : 0x8d6a52, 0.8, 0);
     this.fabric = fabric;
 
@@ -70,16 +77,31 @@ export class CharacterModel {
     this.upper.position.y = 0.85;
     this.body.add(this.upper);
     box(this.upper, 0.46, 0.62, 0.26, 0, 0.31, 0, fabric);
-    box(this.upper, 0.5, 0.42, 0.32, 0, 0.36, 0, team); // colete
-    box(this.upper, 0.36, 0.12, 0.06, 0, 0.26, -0.18, gear); // porta-carregadores
-    box(this.upper, 0.3, 0.3, 0.12, 0, 0.36, 0.2, teamDark); // mochila
-    box(this.upper, 0.52, 0.06, 0.34, 0, 0.04, 0, gear); // cinto
+    if (kind === 'civil') {
+      box(this.upper, 0.47, 0.05, 0.27, 0, 0.04, 0, stdMat(0x2a211b, 0.8, 0.1)); // cinto
+    } else if (kind === 'crim') {
+      box(this.upper, 0.48, 0.2, 0.28, 0, 0.62, 0, fabric); // capuz caído nos ombros
+      box(this.upper, 0.4, 0.3, 0.29, 0, 0.3, 0, stdMat(0x1c1d20, 0.9, 0)); // jaqueta
+      box(this.upper, 0.52, 0.06, 0.34, 0, 0.04, 0, gear);
+    } else {
+      box(this.upper, 0.5, 0.42, 0.32, 0, 0.36, 0, team); // colete
+      box(this.upper, 0.36, 0.12, 0.06, 0, 0.26, -0.18, gear); // porta-carregadores
+      box(this.upper, 0.3, 0.3, 0.12, 0, 0.36, 0.2, teamDark); // mochila
+      box(this.upper, 0.52, 0.06, 0.34, 0, 0.04, 0, gear); // cinto
+      if (kind === 'swat') box(this.upper, 0.32, 0.08, 0.01, 0, 0.42, 0.265, stdMat(0xd8dde4, 0.6, 0)); // faixa refletiva nas costas
+    }
 
     this.head = new THREE.Group();
     this.head.position.y = 0.76;
     this.upper.add(this.head);
     box(this.head, 0.22, 0.25, 0.24, 0, 0, 0, skin);
-    if (look) {
+    if (kind === 'crim') {
+      // balaclava preta com abertura para os olhos
+      box(this.head, 0.235, 0.265, 0.255, 0, 0, 0, stdMat(0x121314, 0.95, 0));
+      box(this.head, 0.17, 0.045, 0.02, 0, 0.03, -0.128, skin);
+      for (const sx of [-1, 1]) box(this.head, 0.03, 0.02, 0.01, sx * 0.045, 0.03, -0.139, stdMat(0x1a1a1a, 0.4, 0));
+      box(this.upper, 0.11, 0.08, 0.11, 0, 0.64, 0, stdMat(0x121314, 0.95, 0));
+    } else if (look) {
       this.buildFace(lc, skin);
       this.buildHair(look.hair, stdMat(lc.hair, 0.85, 0));
       box(this.upper, 0.11, 0.08, 0.11, 0, 0.64, 0, skin); // pescoço
@@ -95,9 +117,15 @@ export class CharacterModel {
     this.upper.add(this.aim);
     box(this.aim, 0.11, 0.11, 0.36, 0.2, -0.06, -0.16, fabric);
     box(this.aim, 0.1, 0.1, 0.32, -0.12, -0.08, -0.26, fabric);
-    box(this.aim, 0.13, 0.12, 0.14, 0.22, 0.0, 0.0, team); // ombreiras
-    box(this.aim, 0.13, 0.12, 0.14, -0.22, 0.0, 0.0, team);
-    if (look) {
+    if (kind !== 'civil' && kind !== 'crim') {
+      box(this.aim, 0.13, 0.12, 0.14, 0.22, 0.0, 0.0, team); // ombreiras
+      box(this.aim, 0.13, 0.12, 0.14, -0.22, 0.0, 0.0, team);
+    }
+    if (kind === 'crim') box(this.aim, 0.12, 0.06, 0.12, 0.2, -0.06, -0.06, stdMat(0xb3202a, 0.7, 0)); // braçadeira vermelha da Crakem
+    if (kind === 'crim' || kind === 'civil') {
+      box(this.aim, 0.09, 0.09, 0.09, 0.2, -0.07, -0.36, skin);
+      box(this.aim, 0.09, 0.09, 0.09, -0.11, -0.09, -0.44, skin);
+    } else if (look) {
       box(this.aim, 0.09, 0.09, 0.09, 0.2, -0.07, -0.36, skin); // mãos
       box(this.aim, 0.09, 0.09, 0.09, -0.11, -0.09, -0.44, skin);
     }
@@ -222,6 +250,27 @@ export class CharacterModel {
     this.deathT = 0;
     this.body.rotation.set(0, 0, 0);
     this.body.position.y = 0;
+    const pose = c.pose || null;
+    this.gunHolder.visible = !pose;
+    if (pose === 'surrender' || pose === 'cuffed' || pose === 'kneel') {
+      // rendido: de pé, mãos para o alto · algemado/refém: ajoelhado, mãos para trás
+      const kneel = pose !== 'surrender';
+      this.poseT = Math.min(1, (this.poseT || 0) + dt * 3);
+      const e = this.poseT;
+      const hipY = kneel ? lerp(0.85, 0.42, e) : 0.85;
+      this.upper.position.y = hipY;
+      this.legs.forEach((leg, i) => {
+        leg.position.y = hipY;
+        leg.scale.y = 1;
+        leg.rotation.x = kneel ? lerp(0, i ? 1.45 : 1.25, e) : 0;
+      });
+      this.upper.rotation.x = kneel ? 0.08 : -0.04;
+      this.aim.rotation.x = kneel ? -2.55 : lerp(0, 2.75, e);
+      this.aim.rotation.y = 0;
+      this.head.rotation.x = kneel ? 0.25 : -0.1;
+      return;
+    }
+    this.poseT = 0;
     const speed = Math.hypot(c.vel.x, c.vel.z);
     const ct = c.crouchT;
     const hipY = lerp(0.85, 0.5, ct);
@@ -234,7 +283,7 @@ export class CharacterModel {
       leg.rotation.x = Math.sin(this.phase + i * Math.PI) * swing + ct * 0.35;
     });
     this.upper.rotation.x = damp(this.upper.rotation.x, ct * 0.18, 10, dt);
-    this.aim.rotation.x = c.pitch;
+    this.aim.rotation.x = this.style === 'civil' ? -1.2 : c.pitch; // civis andam com os braços baixos
     this.aim.rotation.y = 0;
     if (this.swingT !== undefined && this.swingT < 1) {
       this.swingT = Math.min(1, this.swingT + dt / 0.35);

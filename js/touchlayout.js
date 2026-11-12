@@ -7,7 +7,7 @@
 // Input usado por teclado e mouse.
 import { settings, saveSettings } from './settings.js';
 
-export const LAYOUT_VERSION = 1;
+export const LAYOUT_VERSION = 2;
 export const MIN_TOUCH_PX = 44; // área mínima de toque recomendada (Apple e Google)
 
 // ---------------------------------------------------------------- comandos reais do jogo
@@ -31,6 +31,7 @@ export const COMMANDS = {
   last: { label: 'Última arma', short: 'ÚLTIMA', kind: 'tap', key: 'KeyQ' },
   inspect: { label: 'Inspecionar a arma', short: 'INSPEC.', kind: 'tap', key: 'KeyF' },
   nv: { label: 'Visão noturna (mapa noturno)', short: 'NV', kind: 'tap', key: 'KeyX', when: 'night' },
+  interact: { label: 'Interagir · voz de prisão (modo história)', short: 'AÇÃO', kind: 'hold', key: 'KeyE', press: true, when: 'story' },
   loadout: { label: 'Armas (inventário)', short: 'ARMAS', kind: 'tap', key: 'KeyB' },
   board: { label: 'Placar (segurar)', short: 'PLACAR', kind: 'hold', key: 'Tab' },
   chat: { label: 'Chat (multijogador)', short: 'CHAT', kind: 'tap', action: 'chat', when: 'net' },
@@ -56,6 +57,7 @@ function classic() {
     el('crouch', 0.655, 0.85, 0.59, 0.765, 0.15),
     el('reload', 0.805, 0.585, 0.845, 0.545, 0.145),
     el('swap', 0.69, 0.62, 0.63, 0.63, 0.145),
+    el('interact', 0.79, 0.36, 0.66, 0.5, 0.13),
     el('fire', 0.065, 0.5, 0.11, 0.56, 0.17, { opacity: 0.7 }),
     el('pause', 0.975, 0.075, 0.93, 0.15, 0.1, small),
     el('fs', 0.905, 0.075, 0.93, 0.21, 0.1, small),
@@ -76,6 +78,7 @@ function compact() {
     el('crouch', 0.745, 0.88, 0.67, 0.81, 0.125),
     el('reload', 0.845, 0.665, 0.72, 0.70, 0.12),
     el('swap', 0.765, 0.71, 0.88, 0.59, 0.12),
+    el('interact', 0.83, 0.47, 0.7, 0.58, 0.115),
     el('pause', 0.975, 0.07, 0.93, 0.15, 0.09, small),
     el('fs', 0.915, 0.07, 0.93, 0.205, 0.09, small),
     el('board', 0.855, 0.07, 0.93, 0.26, 0.09, small),
@@ -94,6 +97,7 @@ function ergonomic() {
     el('jump', 0.895, 0.44, 0.86, 0.6, 0.165),
     el('crouch', 0.715, 0.66, 0.56, 0.74, 0.16),
     el('reload', 0.765, 0.47, 0.72, 0.6, 0.155),
+    el('interact', 0.79, 0.27, 0.62, 0.5, 0.14),
     el('primary', 0.62, 0.9, 0.12, 0.64, 0.13, small),
     el('secondary', 0.62, 0.73, 0.25, 0.64, 0.13, small),
     el('melee', 0.62, 0.56, 0.38, 0.64, 0.13, small),
@@ -166,6 +170,12 @@ export function sanitizeLayout(l) {
     });
   }
   if (!out.elements.length) return base;
+  // versão 1 não tinha o botão AÇÃO (modo história): acrescenta na posição do layout Clássico
+  if (!(l.version >= 2) && !out.elements.some((e) => e.cmd === 'interact')) {
+    const ref = base.elements.find((e) => e.cmd === 'interact');
+    const mirror = out.hand === 'left';
+    out.elements.push({ ...ref, uid: uid(), land: { x: mirror ? 1 - ref.land.x : ref.land.x, y: ref.land.y }, port: { x: mirror ? 1 - ref.port.x : ref.port.x, y: ref.port.y } });
+  }
   return out;
 }
 
@@ -259,7 +269,7 @@ export function computeRects(layout, W, H, insets, ctx = {}) {
     const r = size / 2;
     cx = Math.min(ins.left + sw - r, Math.max(ins.left + r, cx));
     cy = Math.min(ins.top + sh - r, Math.max(ins.top + r, cy));
-    const available = !cmd.when || (cmd.when === 'night' ? ctx.night : cmd.when === 'net' ? ctx.net : true);
+    const available = !cmd.when || !!ctx[cmd.when];
     rects.push({ e, cmd, cx, cy, size, orient, available, opacity: e.opacity * layout.opacity });
   }
   // layouts prontos: afasta botões que se tocariam nesta resolução (tablets, telas estreitas).

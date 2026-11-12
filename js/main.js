@@ -1,7 +1,7 @@
 // Ponto de entrada: renderizador, laço principal e transições entre menu e partida.
 import * as THREE from 'three';
 import { settings, QUALITY, saveSettings } from './settings.js';
-import { TouchControls, isTouchDevice } from './touch.js';
+import { TouchControls, isTouchDevice, resolveTouchMode } from './touch.js';
 import { setupPWA } from './pwa.js';
 import { ControlEditor } from './controleditor.js';
 import { activeLayout, onLayoutChange } from './touchlayout.js';
@@ -26,12 +26,13 @@ class App {
   constructor() {
     const canvas = document.getElementById('game');
     this.canvas = canvas;
-    this.noLock = new URLSearchParams(location.search).has('nolock');
-    // celulares e tablets: sem captura de mouse, com controles na tela
-    this.touch = isTouchDevice() || new URLSearchParams(location.search).has('touch');
+    this.forceNoLock = new URLSearchParams(location.search).has('nolock');
+    // celulares e tablets: sem captura de mouse, com controles na tela (ou conforme a escolha
+    // do jogador em Configurações → Controles)
+    this.touch = resolveTouchMode(settings.controlMode);
+    this.noLock = this.forceNoLock || this.touch;
+    document.body.classList.toggle('touch', this.touch);
     if (this.touch) {
-      this.noLock = true;
-      document.body.classList.add('touch');
       if (!settings.touchDefaults) {
         // primeira abertura no celular: qualidade mais leve para manter a fluidez
         settings.quality = 'media';
@@ -311,6 +312,27 @@ class App {
     else this.pause('A partida começou! Clique em Continuar para entrar.');
   }
 
+  // Troca o modo de controle sem recarregar a página (Configurações → Controles).
+  applyControlMode() {
+    const touch = resolveTouchMode(settings.controlMode);
+    if (touch === this.touch) return touch;
+    this.touch = touch;
+    this.noLock = this.forceNoLock || touch;
+    document.body.classList.toggle('touch', touch);
+    if (touch && !this.touchUI) {
+      this.touchUI = new TouchControls(this);
+    } else if (!touch && this.touchUI) {
+      this.touchUI.destroy();
+      this.touchUI = null;
+      document.body.classList.remove('rotate');
+    }
+    this.input.locked = false;
+    this.updateRotateHint();
+    this.menu.updateFoot();
+    this.resize();
+    return touch;
+  }
+
   // ---------- tela cheia ----------
   // Precisa partir de um toque ou clique; no iPhone o Safari não oferece tela cheia para páginas
   // (o app instalado na Tela de Início já abre em tela cheia).
@@ -341,7 +363,7 @@ class App {
 
   // Aviso para girar o aparelho apenas quando o perfil exige uma orientação diferente da atual.
   updateRotateHint() {
-    if (!this.touch) return;
+    if (!this.touch) { document.body.classList.remove('rotate'); return; }
     const want = activeLayout().orient;
     const land = window.innerWidth >= window.innerHeight;
     const wrong = (want === 'landscape' && !land) || (want === 'portrait' && land);
@@ -380,6 +402,7 @@ class App {
     this.lastConfig = { ...cfg };
     this.menu.hideAll();
     this.loadMap(cfg.map || 'ferrugem');
+    this.viewmodel.setLook(cfg.mode === 'story' ? { uniform: 'swat' } : activeLook());
     this.setNightVision(false);
     if (cfg.muralSeed == null) cfg.muralSeed = Math.random();
     this.map.rerollMural(cfg.muralSeed);

@@ -7,12 +7,30 @@
 import { settings } from './settings.js';
 import { COMMANDS, activeLayout, computeRects } from './touchlayout.js';
 
+// Detecção automática: só considera aparelho de toque quando o ponteiro principal é o dedo e não há
+// mouse ou trackpad. Notebooks e PCs com Windows costumam informar suporte a toque (maxTouchPoints)
+// mesmo sem tela sensível; por isso esse indicador sozinho não basta.
 export function isTouchDevice() {
   try {
-    return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 1;
+    const mq = (q) => window.matchMedia(q).matches;
+    const coarse = mq('(pointer: coarse)');
+    const fine = mq('(any-pointer: fine)');
+    const hover = mq('(any-hover: hover)');
+    if (coarse && !fine) return true;
+    if (!coarse && (fine || hover)) return false;
+    return navigator.maxTouchPoints > 1 && !fine;
   } catch (e) {
-    return 'ontouchstart' in window;
+    return 'ontouchstart' in window && !window.matchMedia;
   }
+}
+
+// Escolha do jogador em Configurações → Controles: 'auto', 'touch' ou 'pc'.
+export function resolveTouchMode(mode) {
+  const q = new URLSearchParams(location.search);
+  if (q.has('touch')) return true;
+  if (mode === 'touch') return true;
+  if (mode === 'pc') return false;
+  return isTouchDevice();
 }
 
 // Áreas seguras do aparelho (recorte da câmera, barra de navegação), lidas do CSS.
@@ -61,7 +79,7 @@ export class TouchControls {
     this.sink = opts.sink || gameSink(app);
     this.getSize = opts.getSize || (() => ({ W: window.innerWidth, H: window.innerHeight, insets: readSafeInsets() }));
     this.getLayout = opts.getLayout || activeLayout;
-    this.ctx = opts.ctx || (() => ({ night: !!(app.map && app.map.night), net: !!(app.net && app.net.active) }));
+    this.ctx = opts.ctx || (() => ({ night: !!(app.map && app.map.night), net: !!(app.net && app.net.active), story: !!(app.game && app.game.story) }));
     this.toLocal = opts.toLocal || ((x, y) => ({ x, y }));
     this.onEvent = opts.onEvent || null;
     this.isGame = !opts.container;
@@ -158,7 +176,7 @@ export class TouchControls {
   sync() {
     const ctx = this.ctx();
     for (const r of this.rects) {
-      const avail = !r.cmd.when || (r.cmd.when === 'night' ? ctx.night : ctx.net);
+      const avail = !r.cmd.when || !!ctx[r.cmd.when];
       if (avail !== r.available) { this.relayout(); return; }
     }
     const d = this.sink.weapon && this.sink.weapon();

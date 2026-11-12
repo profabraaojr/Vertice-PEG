@@ -66,7 +66,7 @@ export class ControlEditor {
   bake() {
     for (const o of ['land', 'port']) {
       const { W, H, insets } = this.deviceSize(o);
-      for (const r of computeRects(this.draft, W, H, insets, { night: true, net: true })) {
+      for (const r of computeRects(this.draft, W, H, insets, { night: true, net: true, story: true })) {
         r.e[o] = pxToNorm({ ...this.draft, spacing: this.draft.spacing }, W, H, insets, r.cx, r.cy);
       }
     }
@@ -323,7 +323,7 @@ export class ControlEditor {
   renderControls(W, H, insets) {
     const box = $('ctl-ctls');
     box.innerHTML = '';
-    const rects = computeRects(this.draft, W, H, insets, { night: true, net: true });
+    const rects = computeRects(this.draft, W, H, insets, { night: true, net: true, story: true });
     this.rects = rects;
     const bad = overlaps(rects);
     for (const r of rects) {
@@ -464,7 +464,7 @@ export class ControlEditor {
       sink,
       getSize: () => ({ W, H, insets }),
       getLayout: () => this.draft,
-      ctx: () => ({ night: true, net: true }),
+      ctx: () => ({ night: true, net: true, story: true }),
       toLocal: (x, y) => this.local({ clientX: x, clientY: y }),
       onEvent: write,
     });

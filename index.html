@@ -79,6 +79,7 @@
         </div>
         <nav class="main-nav">
           <button class="btn primary big" data-action="play">Jogar</button>
+          <button class="btn big" data-action="story" id="btn-story">Modo História</button>
           <button class="btn big" data-action="coop">Multijogador</button>
           <button class="btn big" data-action="quick-training">Treinamento rápido</button>
           <button class="btn big" data-action="profile">Perfil</button>
@@ -92,6 +93,31 @@
     </section>
 
     <!-- seleção de partida -->
+    <!-- modo história -->
+    <section class="screen" id="screen-story">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Modo História</h2>
+          <p>Agente Falcão, da unidade tática, contra a organização criminosa Crakem, liderada pelo terrorista Vugo.</p></header>
+        <div class="story-grid">
+          <div class="story-list" id="story-list"></div>
+          <div class="story-brief">
+            <p class="sb-tag" id="sb-tag"></p>
+            <h3 id="sb-title"></h3>
+            <div id="sb-text"></div>
+            <p class="sb-controls" id="sb-controls"></p>
+            <label class="opt" id="sb-diff-wrap"><span>Dificuldade</span>
+              <div class="seg" id="sb-diff"><button data-v="recruta">Recruta</button><button data-v="soldado">Soldado</button><button data-v="veterano">Veterano</button></div></label>
+            <p class="sb-best" id="sb-best"></p>
+          </div>
+        </div>
+        <footer class="panel-foot">
+          <button class="btn" data-action="back">Voltar</button>
+          <div class="grow"></div>
+          <button class="btn primary" data-action="story-start" id="sb-start">Iniciar missão</button>
+        </footer>
+      </div>
+    </section>
+
     <section class="screen" id="screen-play">
       <div class="panel wide">
         <header class="panel-head"><h2>Selecionar partida</h2><p id="map-desc"></p></header>
@@ -323,6 +349,9 @@
           <label class="opt check"><input type="checkbox" id="set-music-game"><span>Tocar música durante a partida</span></label>
         </div>
         <div class="tab-body" data-tab="input">
+          <div class="opt"><span>Modo de controle</span>
+            <div class="seg" id="set-control"><button data-v="auto">Automático</button><button data-v="touch">Controles de toque</button><button data-v="pc">Modo PC</button></div>
+            <small class="muted" id="set-control-note"></small></div>
           <label class="opt"><span>Sensibilidade do mouse <output id="out-sens"></output></span><input type="range" id="set-sens" min="0.1" max="4" step="0.05"></label>
           <label class="opt"><span>Sensibilidade com luneta <output id="out-scope"></output></span><input type="range" id="set-scope" min="0.2" max="2" step="0.05"></label>
           <label class="opt"><span>Sensibilidade do toque <output id="out-touch"></output></span><input type="range" id="set-touch" min="0.3" max="3" step="0.05"></label>
@@ -480,8 +509,9 @@
         <div id="end-board" class="end-board"></div>
         <footer class="panel-foot">
           <button class="btn" data-action="quit">Menu principal</button>
+          <button class="btn hidden" data-action="story" id="end-story">Missões</button>
           <div class="grow"></div>
-          <button class="btn primary" data-action="restart">Jogar novamente</button>
+          <button class="btn primary" data-action="restart" id="end-restart">Jogar novamente</button>
         </footer>
       </div>
     </section>
