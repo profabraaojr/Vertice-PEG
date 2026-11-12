@@ -4,81 +4,169 @@ import { buildGun, Kit, gunMat, gunEnvironment } from './guns.js';
 import { damp, lerp, clamp } from './utils.js';
 import { muzzleFlash } from './textures.js';
 import { camoTexture } from './profiles.js';
+import { buildHand, handMaterials, mirrorX, sdBox, sdTiltBox, sdUnion } from './hands.js';
 
 const HIP = {
-  pistol: [0.14, -0.13, -0.42], revolver: [0.14, -0.13, -0.44], smg: [0.2, -0.22, -0.54],
-  ar: [0.22, -0.23, -0.6], ar2: [0.22, -0.23, -0.6], sniper: [0.22, -0.24, -0.58], shotgun: [0.22, -0.23, -0.6],
-  katana: [0.21, -0.27, -0.44], nodachi: [0.22, -0.29, -0.46], gauntlet: [0, -0.25, -0.5],
+  pistol: [0.08, -0.1, -0.4], revolver: [0.08, -0.1, -0.42], smg: [0.11, -0.17, -0.36],
+  ar: [0.11, -0.17, -0.35], ar2: [0.11, -0.175, -0.35], sniper: [0.11, -0.18, -0.35], shotgun: [0.11, -0.17, -0.35],
+  katana: [0.17, -0.17, -0.44], nodachi: [0.18, -0.19, -0.46], gauntlet: [0, -0.23, -0.46],
 };
-// posição (u) da mão esquerda no guarda-mão
-const LEFT_U = { smg: 0.215, ar: 0.33, ar2: 0.33, sniper: 0.27, shotgun: 0.36 };
-
-// Mãos enluvadas e antebraços, modelados no espaço da arma.
+// inclinação de repouso (fora da mira): cano voltado para o centro e arma inclinada, como na
+// empunhadura real; some suavemente ao mirar
+const HIP_ROT = {
+  pistol: [0.06, 0.12, -0.05], revolver: [0.06, 0.12, -0.05], smg: [0.05, 0.26, -0.18],
+  ar: [0.05, 0.28, -0.2], ar2: [0.05, 0.28, -0.2], sniper: [0.05, 0.25, -0.18], shotgun: [0.05, 0.28, -0.2],
+};
+// ---------------------------------------------------------------- mãos e pegada
+// Cada arma descreve as superfícies onde as mãos encostam (punho, guarda-mão, bomba, cabo) e a
+// pose da palma; os dedos se fecham sozinhos até tocar essas superfícies (ver hands.js).
+// Coordenadas no espaço da arma: x = direita, y = cima, z = -u (para trás). A mão de apoio é
+// desenhada como mão direita do lado direito e espelhada para a esquerda.
 let SLEEVE = null;
+
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+// ponto na superfície a partir de um ponto interno, seguindo uma direção, mais um afastamento
+function onSurface(sdf, from, dir, off) {
+  const d = V(...dir).normalize();
+  const p = V(...from);
+  for (let i = 0; i < 400 && sdf(p) < 0; i++) p.addScaledVector(d, 0.0008);
+  return p.addScaledVector(d, off).toArray();
+}
+
+// punho de pistola inclinado: topo (u, y) e base (u, y), largura e espessura
+function gripShape(top, bot, w, t) {
+  const cz = -(top[0] + bot[0]) / 2, cy = (top[1] + bot[1]) / 2;
+  const len = Math.hypot(top[0] - bot[0], top[1] - bot[1]);
+  const ang = -Math.atan2(top[0] - bot[0], top[1] - bot[1]); // inclinação para trás
+  const up = [0, Math.cos(ang), Math.sin(ang)];
+  return { sdf: sdTiltBox([0, cy, cz], [w / 2, len / 2, t / 2], 0.009, ang), c: [0, cy, cz], up };
+}
+
+// mão do gatilho: palma no lado direito e atrás do punho, indicador estendido sobre o gatilho
+function triggerPose(g, extra, o = {}) {
+  const back = o.back || [0.82, 0, 0.57];
+  const at = [g.c[0], g.c[1] + (o.dy ?? 0.008), g.c[2]];
+  return {
+    center: onSurface(sdUnion(g.sdf, extra), at, back, 0.0135),
+    back, thumb: g.up, sdf: sdUnion(g.sdf, extra),
+    index: { fixed: o.index || [0.32, 0.42, 0.34], splay: o.splay ?? 0.2 },
+    thumbRot: o.thumbRot || [1.2, 0.3, 0], thumbCurl: o.thumbCurl || [1.2, 0.6, 0.3],
+    elbow: o.elbow || [0.08, -0.4, 0.4], sleeve: 0.4,
+  };
+}
+
+// mão de apoio por baixo do guarda-mão (lado direito antes do espelhamento)
+function supportPose(sdf, axisY, z, o = {}) {
+  const phi = o.phi ?? 0.8; // ângulo a partir de "para baixo"
+  const back = [Math.sin(phi), -Math.cos(phi), 0];
+  return {
+    center: onSurface(sdf, [0, axisY, z], back, 0.0135),
+    back, thumb: o.thumb || [0, 0.12, -1], sdf, slide: o.slide ?? 0.016,
+    thumbRot: o.thumbRot || [0.3, 1.6, -0.6], thumbCurl: o.thumbCurl || [0.3, 0.25, 0.15],
+    elbow: o.elbow || [0.0, -0.3, 0.12], sleeve: 0.38,
+  };
+}
+
+const GRIPS = {
+  pistol() {
+    const g = gripShape([-0.04, -0.012], [-0.053, -0.115], 0.028, 0.044);
+    const slide = sdBox([0, 0.025, 0.05], [0.0155, 0.032, 0.096], 0.004);
+    const wide = (p) => g.sdf(p) - 0.011; // punho mais os dedos da mão do gatilho
+    return [
+      { pose: { ...triggerPose(g, slide, { thumbRot: [0.75, 1.3, -0.1], index: [0.22, 0.34, 0.3], splay: 0.24, elbow: [0.08, -0.4, 0.42] }), scale: 1 / 1.3 } },
+      { mirror: true, pose: { center: onSurface(wide, [0, -0.07, 0.04], [0.78, -0.05, -0.62], 0.0135), back: [0.78, -0.05, -0.62], thumb: [0, 0.6, -0.8], sdf: wide, thumbRot: [0.15, 0.4, 0], thumbCurl: [0.15, 0.12, 0.1], elbow: [0.2, -0.42, 0.4], sleeve: 0.4, scale: 1 / 1.3 } },
+    ];
+  },
+  revolver() {
+    const g = gripShape([-0.05, -0.012], [-0.075, -0.125], 0.034, 0.05);
+    const frame = sdBox([0, 0.027, 0.01], [0.012, 0.04, 0.056], 0.004);
+    const wide = (p) => g.sdf(p) - 0.011;
+    return [
+      { pose: { ...triggerPose(g, frame, { thumbRot: [0.75, 1.3, -0.1], index: [0.22, 0.38, 0.32], splay: 0.26, elbow: [0.08, -0.4, 0.42] }), scale: 1 / 1.3 } },
+      { mirror: true, pose: { center: onSurface(wide, [0, -0.075, 0.06], [0.78, -0.05, -0.62], 0.0135), back: [0.78, -0.05, -0.62], thumb: [0, 0.6, -0.8], sdf: wide, thumbRot: [0.15, 0.4, 0], thumbCurl: [0.15, 0.12, 0.1], elbow: [0.2, -0.42, 0.4], sleeve: 0.4, scale: 1 / 1.3 } },
+    ];
+  },
+  smg() {
+    const g = gripShape([-0.028, -0.008], [-0.046, -0.11], 0.032, 0.044);
+    const recv = sdBox([0, 0.03, -0.08], [0.021, 0.04, 0.165], 0.004);
+    const stub = sdBox([0, -0.024, -0.216], [0.015, 0.03, 0.017], 0.007);
+    const sup = sdUnion(stub, recv);
+    const sg = { sdf: stub, c: [0, -0.03, -0.216], up: [0, 1, 0] };
+    return [
+      { pose: triggerPose(g, recv) },
+      { mirror: true, pose: { center: onSurface(sup, sg.c, [0.8, 0, 0.6], 0.0135), back: [0.8, 0, 0.6], thumb: [0, 1, -0.15], sdf: sup, thumbRot: [0.55, 1.1, -0.2], thumbCurl: 'wrap', elbow: [0.34, -0.4, 0.18], sleeve: 0.42 } },
+    ];
+  },
+  ar() {
+    const g = gripShape([-0.025, -0.008], [-0.054, -0.115], 0.034, 0.044);
+    const recv = sdBox([0, 0.03, -0.035], [0.022, 0.039, 0.165], 0.004);
+    const hg = sdUnion(sdBox([0, 0.027, -0.325], [0.025, 0.023, 0.12], 0.009), sdBox([0, 0.068, -0.31], [0.02, 0.012, 0.1], 0.008));
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.03, -0.24) }];
+  },
+  ar2() {
+    const g = gripShape([-0.03, -0.01], [-0.046, -0.11], 0.032, 0.044);
+    const recv = sdBox([0, 0.035, -0.03], [0.022, 0.035, 0.16], 0.004);
+    const hg = sdBox([0, 0.039, -0.335], [0.023, 0.031, 0.14], 0.012);
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.039, -0.25) }];
+  },
+  sniper() {
+    const g = gripShape([-0.035, -0.008], [-0.045, -0.118], 0.034, 0.046);
+    const recv = sdBox([0, 0.03, 0.0], [0.024, 0.03, 0.12], 0.006);
+    const hg = sdUnion(sdBox([0, 0.024, -0.215], [0.025, 0.02, 0.125], 0.008), sdBox([0, 0.056, -0.3], [0.0145, 0.0145, 0.2], 0.012));
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.026, -0.2) }];
+  },
+  shotgun() {
+    const g = gripShape([-0.04, -0.01], [-0.083, -0.114], 0.036, 0.05);
+    const recv = sdBox([0, 0.03, -0.06], [0.022, 0.04, 0.15], 0.004);
+    const pump = sdUnion(sdBox([0, 0.015, -0.36], [0.025, 0.021, 0.09], 0.01), sdBox([0, 0.052, -0.36], [0.0138, 0.0138, 0.12], 0.012));
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, onPump: true, pose: supportPose(pump, 0.015, -0.315) }];
+  },
+  blade(type) {
+    const hl = type === 'nodachi' ? 0.34 : 0.26;
+    const u0 = 0.085 - 0.037;
+    const hilt = sdBox([0, 0.001, -(u0 - hl / 2)], [0.0135, 0.018, hl / 2], 0.009);
+    const fist = (u, mirror) => ({
+      mirror, pose: {
+        center: onSurface(hilt, [0, 0.001, -u], [0.7, -0.71, 0], 0.0135), back: [0.7, -0.71, 0], thumb: [0, 0.1, -1], sdf: hilt,
+        thumbRot: [0.45, 1.5, -0.3], thumbCurl: 'wrap', fingers: { max: [2.1, 2.0, 1.5] },
+        elbow: mirror ? [0.3, -0.35, 0.3] : [0.18, -0.4, 0.35], sleeve: 0.4, scale: 1 / 0.85,
+      },
+    });
+    return [fist(u0 - 0.055, false), fist(u0 - hl + 0.06, true)];
+  },
+};
+GRIPS.katana = () => GRIPS.blade('katana');
+GRIPS.nodachi = () => GRIPS.blade('nodachi');
+
 function buildHands(type, gun) {
   const sleeve = SLEEVE || gunMat('polymer', 0x414636);
-  const glove = gunMat('rubber', 0x1a1b1d);
-  const pad = gunMat('polymer', 0x33363a);
-  const cuff = gunMat('polymer', 0x23261f);
-  const k = new Kit();
-  const blade = type === 'katana' || type === 'nodachi';
-  const pistol = type === 'pistol' || type === 'revolver';
+  const mats = handMaterials(gunEnvironment());
   if (type === 'gauntlet') {
+    // as manoplas cobrem as mãos: só antebraços e punhos
+    const cuff = gunMat('polymer', 0x23261f);
+    const k = new Kit();
     for (const sx of [-1, 1]) {
       k.box(0.086, 0.086, 0.3, sx * 0.13, -0.034, -0.37, sleeve, { rx: 0.1, b: 0.02 });
       k.box(0.092, 0.092, 0.03, sx * 0.13, -0.03, -0.235, cuff, { b: 0.01 });
     }
     return { main: k.build(), onPump: null };
   }
-  if (blade) {
-    const us = type === 'nodachi' ? [0.005, -0.21] : [0.005, -0.15];
-    us.forEach((u, i) => {
-      const sx = i === 0 ? 1 : -1;
-      k.box(0.05, 0.05, 0.062, 0, 0.0, u, glove, { b: 0.012 });
-      for (let f = 0; f < 4; f++) k.box(0.054, 0.016, 0.0135, 0, -0.02, u - 0.022 + f * 0.0148, glove, { b: 0.004 });
-      k.box(0.016, 0.018, 0.05, -sx * 0.02, 0.022, u + 0.005, glove, { b: 0.005 });
-      k.box(0.03, 0.01, 0.04, sx * 0.012, 0.027, u, pad, { b: 0.003 });
-      k.box(0.06, 0.058, 0.05, sx * 0.022, -0.035, u - 0.045, cuff, { rx: 0.5, ry: -sx * 0.32, b: 0.014 });
-      k.box(0.07, 0.068, 0.3, sx * 0.065, -0.085, u - 0.17, sleeve, { rx: 0.5, ry: -sx * 0.32, b: 0.018 });
-    });
-    return { main: k.build(), onPump: null };
-  }
-  // mão direita no punho
-  k.box(0.052, 0.074, 0.05, 0.01, -0.052, -0.04, glove, { rx: 0.2, b: 0.012 });
-  for (let f = 0; f < 3; f++) k.box(0.05, 0.0165, 0.022, 0.001, -0.03 - f * 0.0195, -0.012 - f * 0.005, glove, { b: 0.005 });
-  k.box(0.014, 0.014, 0.056, 0.0225, -0.013, 0.008, glove, { b: 0.004 }); // indicador estendido
-  k.box(0.016, 0.017, 0.05, -0.022, -0.01, -0.02, glove, { b: 0.005 }); // polegar
-  k.box(0.012, 0.04, 0.034, 0.036, -0.05, -0.042, pad, { rx: 0.2, b: 0.003 }); // proteção dos nós
-  k.box(0.062, 0.06, 0.05, 0.03, -0.088, -0.09, cuff, { rx: 0.35, ry: -0.2, b: 0.014 });
-  k.box(0.07, 0.068, 0.3, 0.052, -0.105, -0.21, sleeve, { rx: 0.35, ry: -0.2, b: 0.018 });
-  // mão esquerda
-  const kl = type === 'shotgun' ? new Kit() : k;
-  if (pistol) {
-    k.box(0.05, 0.062, 0.04, -0.02, -0.058, -0.03, glove, { rx: 0.2, ry: 0.25, b: 0.012 });
-    for (let f = 0; f < 3; f++) k.box(0.056, 0.016, 0.02, -0.004, -0.036 - f * 0.019, 0.0 - f * 0.005, glove, { b: 0.005 });
-    k.box(0.016, 0.016, 0.05, -0.024, 0.004, 0.0, glove, { b: 0.005 });
-    k.box(0.062, 0.06, 0.05, -0.05, -0.092, -0.085, cuff, { rx: 0.35, ry: 0.4, b: 0.014 });
-    k.box(0.07, 0.068, 0.3, -0.095, -0.112, -0.2, sleeve, { rx: 0.35, ry: 0.4, b: 0.018 });
-  } else {
-    const u = LEFT_U[type] ?? 0.33;
-    const y = type === 'smg' ? -0.03 : type === 'shotgun' ? -0.024 : -0.012;
-    kl.box(0.062, 0.03, 0.092, -0.004, y, u, glove, { b: 0.01 });
-    for (let f = 0; f < 4; f++) kl.box(0.014, 0.046, 0.0185, 0.031, y + 0.03, u - 0.032 + f * 0.0212, glove, { b: 0.005 });
-    kl.box(0.015, 0.042, 0.02, -0.034, y + 0.028, u - 0.03, glove, { rx: -0.3, b: 0.005 });
-    kl.box(0.03, 0.008, 0.05, -0.002, y - 0.018, u, pad, { b: 0.003 });
-    kl.box(0.062, 0.058, 0.05, -0.035, y - 0.02, u - 0.07, cuff, { rx: 0.25, ry: 0.45, b: 0.014 });
-    kl.box(0.07, 0.068, 0.36, -0.1, y - 0.07, u - 0.22, sleeve, { rx: 0.25, ry: 0.45, b: 0.018 });
-  }
-  const main = k.build();
+  const main = new THREE.Group();
   let onPump = null;
-  if (type === 'shotgun' && gun.pump) { onPump = kl.build(); gun.pump.add(onPump); }
+  for (const h of GRIPS[type]()) {
+    const k = new Kit();
+    buildHand(k, h.pose, mats, sleeve);
+    const g = k.build();
+    if (h.mirror) mirrorX(g);
+    if (h.onPump && gun.pump) { gun.pump.add(g); onPump = g; } else main.add(g);
+  }
   return { main, onPump };
 }
 
 export class ViewModel {
   constructor() {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(64, 1, 0.01, 10);
+    this.camera = new THREE.PerspectiveCamera(52, 1, 0.01, 10);
     this.scene.add(this.camera);
     // luz de estúdio: ambiente suave, principal quente e contorno frio vindo de trás
     this.hemi = new THREE.HemisphereLight(0xdfe8f5, 0x6a5a48, 0.55);
@@ -257,7 +345,8 @@ export class ViewModel {
     let px = lerp(hip[0], adsPos[0], a);
     let py = lerp(hip[1], adsPos[1], a);
     let pz = lerp(hip[2], adsPos[2], a);
-    let rx = 0, ry = 0, rz = 0;
+    const hr = HIP_ROT[type];
+    let rx = hr ? hr[0] * (1 - a) : 0, ry = hr ? hr[1] * (1 - a) : 0, rz = hr ? hr[2] * (1 - a) : 0;
 
     const breathe = (1 - a * 0.85) * (1 - moveAmt);
     px += this.sway.x + Math.sin(this.bobPhase) * 0.009 * bobAmp + Math.sin(this.idle * 0.9) * 0.0016 * breathe;
