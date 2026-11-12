@@ -103,6 +103,9 @@ class App {
     this.lastConfig = null;
 
     this.input.onLockChange = (locked) => {
+      // pedido de captura atendido depois de a partida já ter sido encerrada: solta o ponteiro
+      // para os cliques voltarem aos menus
+      if (locked && (this.state !== 'playing' || this.noLock)) { this.suppressPause = true; this.input.exitLock(); if (this.noLock) this.input.locked = this.state === 'playing'; return; }
       if (locked || this.noLock) return;
       if (this.suppressPause) { this.suppressPause = false; return; }
       if (this.state === 'playing') this.pause();
@@ -389,7 +392,12 @@ class App {
 
   releasePointer() {
     if (this.touchUI) this.touchUI.show(false);
-    if (this.noLock) { this.input.locked = false; return; }
+    if (this.noLock) {
+      this.input.locked = false;
+      // um pedido de captura antigo pode ter sido atendido depois: solta mesmo assim
+      if (document.pointerLockElement) { this.suppressPause = true; this.input.exitLock(); }
+      return;
+    }
     if (document.pointerLockElement) {
       this.suppressPause = true;
       this.input.exitLock();
