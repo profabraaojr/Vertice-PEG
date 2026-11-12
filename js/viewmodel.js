@@ -11,12 +11,26 @@ const HIP = {
   ar: [0.11, -0.17, -0.35], ar2: [0.11, -0.175, -0.35], sniper: [0.11, -0.18, -0.35], shotgun: [0.11, -0.17, -0.35],
   katana: [0.17, -0.17, -0.44], nodachi: [0.18, -0.19, -0.46], gauntlet: [0, -0.23, -0.46],
 };
-// inclinação de repouso (fora da mira): cano voltado para o centro e arma inclinada, como na
-// empunhadura real; some suavemente ao mirar
-const HIP_ROT = {
-  pistol: [0.06, 0.12, -0.05], revolver: [0.06, 0.12, -0.05], smg: [0.05, 0.26, -0.18],
-  ar: [0.05, 0.28, -0.2], ar2: [0.05, 0.28, -0.2], sniper: [0.05, 0.25, -0.18], shotgun: [0.05, 0.28, -0.2],
-};
+// inclinação lateral de repouso (fora da mira). A direção do cano não entra aqui: ela é
+// calculada para cada arma de modo que a linha do cano cruze o centro da mira (ver aimAt).
+const HIP_ROLL = { pistol: -0.05, revolver: -0.05, smg: -0.16, ar: -0.18, ar2: -0.18, sniper: -0.16, shotgun: -0.18 };
+const CONVERGE = 9; // distância (m) em que a linha do cano encontra o centro da tela
+
+// Ângulos (rx, ry) que fazem a linha do cano, saindo da posição de repouso, passar por (0, 0, -D).
+// Com a ordem de Euler XYZ, a inclinação lateral (rz) não altera a direção do cano.
+function aimAt(hip, boreY, boreZ, D) {
+  let rx = 0, ry = 0;
+  const e = new THREE.Euler();
+  const b = new THREE.Vector3();
+  for (let i = 0; i < 4; i++) {
+    e.set(rx, ry, 0);
+    b.set(0, boreY, boreZ).applyEuler(e).add(V(...hip));
+    const v = V(0, 0, -D).sub(b).normalize();
+    ry = Math.asin(-v.x);
+    rx = Math.atan2(v.y, -v.z);
+  }
+  return [rx, ry];
+}
 // ---------------------------------------------------------------- mãos e pegada
 // Cada arma descreve as superfícies onde as mãos encostam (punho, guarda-mão, bomba, cabo) e a
 // pose da palma; os dedos se fecham sozinhos até tocar essas superfícies (ver hands.js).
@@ -247,7 +261,10 @@ export class ViewModel {
     if (pistol) holder.scale.setScalar(1.3);
     if (t === 'gauntlet' || blade) holder.scale.setScalar(0.85);
     holder.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; } });
-    const entry = { holder, gun, hip: HIP[t] || HIP.ar, ads: pistol ? -0.46 : t === 'smg' ? -0.5 : t === 'gauntlet' ? -0.36 : -0.6 };
+    const hip = HIP[t] || HIP.ar;
+    const sc = holder.scale.y;
+    const aim = blade || t === 'gauntlet' ? [0, 0] : aimAt(hip, gun.muzzle.position.y * sc, gun.muzzle.position.z * sc, CONVERGE);
+    const entry = { holder, gun, hip, aim, roll: HIP_ROLL[t] || 0, ads: pistol ? -0.46 : t === 'smg' ? -0.5 : t === 'gauntlet' ? -0.36 : -0.6 };
     this.models.set(def.id, entry);
     return entry;
   }
@@ -267,6 +284,14 @@ export class ViewModel {
     this.slideKick = 0;
     this.switchT = animate ? 0 : 1;
     this.cycleT = 1;
+  }
+
+  // Posição da boca do cano na tela (coordenadas normalizadas -1..1), para os traçantes saírem
+  // exatamente de onde o jogador vê o cano.
+  muzzleNDC(out) {
+    if (!this.current || !this.root.visible) return null;
+    this.current.gun.muzzle.updateWorldMatrix(true, false);
+    return this.current.gun.muzzle.getWorldPosition(out).project(this.camera);
   }
 
   // Golpe de espada: alterna a direção dos cortes leves.
@@ -345,8 +370,8 @@ export class ViewModel {
     let px = lerp(hip[0], adsPos[0], a);
     let py = lerp(hip[1], adsPos[1], a);
     let pz = lerp(hip[2], adsPos[2], a);
-    const hr = HIP_ROT[type];
-    let rx = hr ? hr[0] * (1 - a) : 0, ry = hr ? hr[1] * (1 - a) : 0, rz = hr ? hr[2] * (1 - a) : 0;
+    const aim = this.current.aim;
+    let rx = aim[0] * (1 - a), ry = aim[1] * (1 - a), rz = this.current.roll * (1 - a);
 
     const breathe = (1 - a * 0.85) * (1 - moveAmt);
     px += this.sway.x + Math.sin(this.bobPhase) * 0.009 * bobAmp + Math.sin(this.idle * 0.9) * 0.0016 * breathe;

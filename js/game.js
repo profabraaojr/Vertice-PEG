@@ -15,6 +15,7 @@ const _base = new THREE.Vector3();
 const _end = new THREE.Vector3();
 const _n = new THREE.Vector3();
 const _m = new THREE.Vector3();
+const _ndc = new THREE.Vector3();
 const _r = new THREE.Vector3();
 const _u = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
@@ -427,9 +428,15 @@ export class Game {
     _u.crossVectors(_r, _base).normalize();
     const hipK = 1 - p.ads;
     const side = def.model.type === 'gauntlet' ? (w.shotsFired % 2 ? -1 : 1) : 1;
-    const muzzle = def.model.type === 'gauntlet'
+    let muzzle = def.model.type === 'gauntlet'
       ? _m.copy(_o).addScaledVector(_base, 0.45).addScaledVector(_r, 0.16 * side).addScaledVector(_u, -0.17)
       : _m.copy(_o).addScaledVector(_base, 0.6).addScaledVector(_r, 0.13 * hipK).addScaledVector(_u, -0.1 * hipK - 0.03);
+    // jogador local: parte do ponto da tela onde está a boca do cano da arma em primeira pessoa
+    if (p.isPlayer && def.model.type !== 'gauntlet' && this.viewmodel.muzzleNDC(_ndc)) {
+      _ndc.z = 0.5;
+      _ndc.unproject(this.camera).sub(this.camera.position).normalize();
+      muzzle = _m.copy(this.camera.position).addScaledVector(_ndc, 0.6);
+    }
     const muzzleCopy = muzzle.clone();
     const pellets = def.pellets;
     let hitsBefore = p.hits;
