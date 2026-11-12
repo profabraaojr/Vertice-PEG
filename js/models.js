@@ -81,7 +81,9 @@ export class CharacterModel {
       box(this.upper, 0.47, 0.05, 0.27, 0, 0.04, 0, stdMat(0x2a211b, 0.8, 0.1)); // cinto
     } else if (kind === 'crim') {
       box(this.upper, 0.48, 0.2, 0.28, 0, 0.62, 0, fabric); // capuz caído nos ombros
-      box(this.upper, 0.4, 0.3, 0.29, 0, 0.3, 0, stdMat(0x1c1d20, 0.9, 0)); // jaqueta
+      box(this.upper, 0.4, 0.3, 0.29, 0, 0.3, 0, stdMat(style.leader ? 0x6b1a1a : 0x1c1d20, 0.9, 0)); // jaqueta (vermelho-escura no líder)
+      if (style.marksman) box(this.upper, 0.44, 0.36, 0.3, 0, 0.34, 0, stdMat(0xc0262e, 0.8, 0)); // colete vermelho do atirador
+      if (style.leader) box(this.upper, 0.06, 0.06, 0.02, 0.12, 0.5, -0.15, stdMat(0xd4af37, 0.4, 0.8)); // insígnia dourada
       box(this.upper, 0.52, 0.06, 0.34, 0, 0.04, 0, gear);
     } else {
       box(this.upper, 0.5, 0.42, 0.32, 0, 0.36, 0, team); // colete

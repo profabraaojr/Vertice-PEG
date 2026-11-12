@@ -89,20 +89,27 @@ Navegadores recomendados: Chrome, Edge ou Firefox atualizados. Clique na tela pa
 
 Campanha individual do **Agente Falcão**, da unidade tática, com farda própria, contra a organização criminosa **Crakem**, liderada pelo terrorista **Vugo**. Os criminosos usam codinomes fictícios; os perfis dos alunos não aparecem como criminosos.
 
-| Missão | Cenário | Situação |
+| Missão | Cenário | Objetivo |
 |---|---|---|
-| 1. Resgate no Distrito Ferrugem | Distrito Ferrugem (dia) | disponível |
-| 2. Contagem regressiva (atentado a bomba) | Ferrugem à Noite | em produção |
-| 3. A caçada a Vugo (captura) | Selva Esmeralda | em produção |
-| 4. Olho no alto (tiro de precisão) | Ruínas de Aruanã | em produção |
+| 1. Resgate no Distrito Ferrugem | Distrito Ferrugem (dia) | libertar 3 reféns, levá-los à viatura e neutralizar os sequestradores |
+| 2. Contagem regressiva | Ferrugem à Noite | achar o artefato pelo sinal do detector e desarmá-lo antes do fim da contagem |
+| 3. A caçada a Vugo | Selva Esmeralda | capturar Vugo vivo antes que ele alcance o barco |
+| 4. Olho no alto | Ruínas de Aruanã | do alto, com o rifle de precisão, proteger a equipe até o templo e abater o atirador "Agulha" |
 
-Na Missão 1, três reféns estão no armazém nordeste. É preciso libertá-los, levá-los até a viatura no pátio e neutralizar os sequestradores. Se o alarme soar, o agente tem 90 segundos para libertar todos os reféns.
+Regras comuns a todas as missões:
 
 - **Voz de prisão:** mire num suspeito e pressione **E** (no celular, o botão **AÇÃO**). A chance de rendição é maior se ele estiver desprevenido, ferido, perto e sem comparsas ao lado. Criminosos muito feridos também podem se render sozinhos;
-- **Algemar e libertar:** aproxime-se e **segure E**;
-- **Pontuação:** refém salvo 500, criminoso preso 400, rendido sem algemas 200, abatido 100, missão sem alarme 600, bônus de tempo; atirar em quem já se rendeu tira 500 ("uso excessivo da força"). A missão vale até três estrelas, e o melhor resultado fica salvo.
+- **Algemar e interagir:** aproxime-se e **segure E** (algemar, libertar refém, abrir o painel do artefato);
+- **Pontuação:** criminoso preso 400, rendido sem algemas 200, abatido 100, missão sem alarme 600, bônus de tempo; atirar em quem já se rendeu tira 500 ("uso excessivo da força"). Cada missão vale até três estrelas, e o melhor resultado fica salvo.
 
-Falhas: o agente ser abatido, um refém ser atingido pelo agente ou o tempo do alarme acabar.
+Detalhes de cada missão:
+
+1. **Resgate:** se o alarme soar, o agente tem 90 segundos para libertar todos os reféns. Falha se um refém for atingido pelo agente ou se o tempo acabar.
+2. **Bomba:** o artefato fica num de três prédios, sorteado a cada partida. O detector mostra a força do sinal e o bipe acelera com a proximidade; a Central dá pistas do setor. No painel, cortam-se os fios na ordem dos símbolos do visor (teclas 1 a 4 ou toque); um fio fora de ordem tira 25 segundos. Tempo: 5 min (Recruta), 4 min (Soldado), 3 min 10 s (Veterano).
+3. **Captura:** Vugo foge quando percebe o agente. Os tiros o ferem, mas não o matam: ferido, ele se rende. Render Vugo sem disparar contra ele vale 500 pontos extras.
+4. **Atirador de elite:** o agente começa no alto de um bloco de pedra com o Longinus .338. Camuflado, só é localizado por alguns segundos depois de cada disparo (ou se um criminoso chegar muito perto). A equipe avança de ponto em ponto quando o caminho está livre. Falha se toda a equipe cair ou se um civil for atingido.
+
+Falhas comuns: o agente ser abatido.
 
 ## Perfis
 

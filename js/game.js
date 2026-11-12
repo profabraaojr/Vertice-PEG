@@ -407,9 +407,9 @@ export class Game {
     }
     for (const h of struck) {
       _end.copy(o).addScaledVector(d, h.t);
-      if (h.c.isHostage) {
+      if (h.c.isHostage || h.c.isCivilian) {
         this.effects.blood(_end, d, false);
-        if (this.story) this.story.hostageHit(shooter, h.c);
+        if (this.story) this.story.innocentHit(shooter, h.c);
         continue;
       }
       if (this.isEnemy(shooter, h.c)) {
@@ -697,7 +697,7 @@ export class Game {
     }
 
     // jogador
-    const inp = this.inputBlocked ? EMPTY_INPUT : this.input;
+    const inp = this.inputBlocked || (this.story && this.story.blocksInput) ? EMPTY_INPUT : this.input;
     if (p.alive) {
       p.update(dt, inp, this);
       p.updateWeapons(dt);

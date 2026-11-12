@@ -1,6 +1,6 @@
 // Service worker do VÉRTICE: rede primeiro, cache como reserva.
 // Com internet, sempre busca a versão mais nova publicada; sem internet, usa a última guardada.
-const CACHE = 'vertice-v3';
+const CACHE = 'vertice-v4';
 const SHELL = ['./', './index.html', './css/style.css', './js/main.js', './vendor/three.module.min.js', './manifest.webmanifest', './icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
