@@ -81,15 +81,57 @@ const TOP_RUINS = [
   '#####dd#####.........X.......XX....#',
 ];
 
+// Centro de Treinamento: galpão de tiro (com a raia que sai pelo norte do mapa) e dojô ao sul.
+// Desenho completo das 36 linhas (sem espelhamento).
+const TOP_RANGE = [
+  '############............############',
+  '#..........#............#..........#',
+  '#..........#............#..........#',
+  '#..........#............#..........#',
+  '#..........#............#..........#',
+  '#..........#............#..........#',
+  '#..........#............#..........#',
+  '#..........#............#..........#',
+  '#..........#............#..........#',
+  '#..........#,,,,,,,,,,,,#..........#',
+  '#..........#,,,,,,,,,,,,#..........#',
+  '#..........#,,,,,,,,,,,,#..........#',
+  '#..........#,,,,,,,,,,,,#..........#',
+  '#..........######dd######..........#',
+  '#..................................#',
+  '#...............AAAA...............#',
+  '#..................................#',
+  '#..................................#',
+  '#...############dd##############...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...w,,,,,,,,,,,,,,,,,,,,,,,,,,w...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...w,,,,,,,,,,,,,,,,,,,,,,,,,,w...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...#,,,,,,,,,,,,,,,,,,,,,,,,,,#...#',
+  '#...############################...#',
+  '#..................................#',
+  '#...............ZZZZ...............#',
+  '#..................................#',
+  '####################################',
+];
+
 function mirrorRow(r) {
   return r.split('').reverse().map((ch) => (ch === 'Z' ? 'A' : ch === 'A' ? 'Z' : ch)).join('');
 }
-const makeLayout = (top) => [...top, ...top.slice().reverse().map(mirrorRow)];
+const makeLayout = (top) => (top.length >= N ? top.slice() : [...top, ...top.slice().reverse().map(mirrorRow)]);
 
 export const MAPS = {
   ferrugem: { id: 'ferrugem', name: 'Distrito Ferrugem', tag: 'Dia', theme: 'city', top: TOP_URBAN, desc: 'Complexo industrial ao sol: depósitos, escritórios e um pátio de contêineres.' },
   noite: { id: 'noite', name: 'Ferrugem à Noite', tag: 'Noturno', theme: 'night', top: TOP_URBAN, desc: 'O mesmo distrito sob a lua. Quase nada se vê sem os óculos de visão noturna (tecla X).' },
   selva: { id: 'selva', name: 'Selva Esmeralda', tag: 'Selva', theme: 'jungle', top: TOP_JUNGLE, desc: 'Clareiras entre árvores altas, moitas que escondem, rochas e cabanas de bambu.' },
+  estande: { id: 'estande', name: 'Centro de Treinamento', tag: 'Treino', theme: 'range', top: TOP_RANGE, training: true, desc: 'Estande de tiro de longa distância e dojô de cortes em bambu.' },
   ruinas: { id: 'ruinas', name: 'Ruínas de Aruanã', tag: 'Construção antiga', theme: 'ruins', top: TOP_RUINS, desc: 'Templo de pedra ao entardecer: colunatas, câmaras e muros em ruínas.' },
 };
 export const MAP_IDS = ['ferrugem', 'noite', 'selva', 'ruinas'];
@@ -356,6 +398,10 @@ const THEMES = {
     decor: 'city', stripes: true, exposure: 1, vmLight: 1, botView: 1, night: false,
     radar: { floor: '#24231f', inner: '#34332f' },
   }),
+  range: () => ({
+    ...THEMES.city(),
+    fog: [0xd2c6ae, 170, 470], decor: 'range', stripes: false, botView: 1,
+  }),
   night: () => ({
     ...THEMES.city(),
     sky: 0x04060c, fog: [0x080b13, 22, 150], sunDir: [-0.45, 0.72, -0.5], sun: [0x8fa8d8, 0.55], sunGlow: [0.45, 0.55, 0.8],
@@ -398,6 +444,78 @@ const THEMES = {
 };
 
 // ---------- montagem do mapa ----------
+// Raia do estande: continua a partir da abertura norte do mapa (colunas 12 a 23) até 220 m da
+// linha de tiro, com muros laterais, placas de distância e uma barreira de terra no fundo.
+export const RANGE = { fireZ: -17, laneX0: -12, laneX1: 12, endZ: -246, distances: [25, 50, 100, 150, 200] };
+function buildRangeLane(root, addCollider, T, std) {
+  const { laneX0, laneX1, endZ, fireZ } = RANGE;
+  const z0 = -HALF;
+  const wallMat = std({ map: TX.concreteWall('#b3a58c', 41), roughness: 0.95 });
+  const wg = new GeoBuilder();
+  for (const [x0, x1] of [[laneX0 - 2, laneX0], [laneX1, laneX1 + 2]]) {
+    wg.box(x0, 0, endZ, x1, 3.2, z0, { su: 1 / 4, sv: 1 / 3.2, st: 1 / 4, skip: { ny: true } });
+    addCollider(x0, 0, endZ, x1, 3.2, z0, 'concrete');
+  }
+  root.add(new THREE.Mesh(wg.build(), wallMat));
+  // mesas de tiro na linha de disparo (baixas, com vãos entre elas)
+  const benchMat = std({ map: TX.crateWood(45, [150, 120, 85]), roughness: 0.8 });
+  const bg = new GeoBuilder();
+  for (const cx of [-8, 0, 8]) {
+    const x0 = cx - 2.4, x1 = cx + 2.4, zA = fireZ - 1.75, zB = fireZ - 1.05;
+    bg.box(x0, 0.78, zA, x1, 0.86, zB, { su: 1 / 2, sv: 1 / 2 });
+    for (const lx of [x0 + 0.1, x1 - 0.2]) bg.box(lx, 0, zA + 0.05, lx + 0.1, 0.78, zB - 0.05, { su: 1, sv: 1 });
+    addCollider(x0, 0, zA, x1, 0.86, zB, 'wood');
+  }
+  root.add(new THREE.Mesh(bg.build(), benchMat));
+
+  // piso de cascalho da raia e faixas a cada 25 m
+  const gravel = new THREE.Mesh(new THREE.PlaneGeometry(laneX1 - laneX0, z0 - endZ), std({ map: TX.groundSand(43), color: 0xb9ab92, roughness: 1 }));
+  gravel.material.map.repeat.set((laneX1 - laneX0) / 4, (z0 - endZ) / 4);
+  gravel.rotation.x = -Math.PI / 2;
+  gravel.position.set(0, 0.01, (z0 + endZ) / 2);
+  gravel.receiveShadow = true;
+  root.add(gravel);
+  const lineMat = std({ color: 0xe8e2d0, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 });
+  for (let d = 25; d <= 200; d += 25) {
+    const l = new THREE.Mesh(new THREE.PlaneGeometry(laneX1 - laneX0, 0.12), lineMat);
+    l.rotation.x = -Math.PI / 2;
+    l.position.set(0, 0.02, fireZ - d);
+    root.add(l);
+  }
+  // barreira de terra (para-balas) no fundo
+  const berm = new THREE.Mesh(new THREE.BoxGeometry(laneX1 - laneX0 + 8, 9, 6), std({ map: TX.groundSand(44), color: 0x9a8566, roughness: 1 }));
+  berm.position.set(0, 4.5, endZ - 1);
+  berm.receiveShadow = true;
+  root.add(berm);
+  addCollider(laneX0 - 4, 0, endZ - 4, laneX1 + 4, 9, endZ + 2, 'concrete');
+  // placas de distância nos dois muros
+  for (const d of RANGE.distances) {
+    for (const side of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1), std({ map: signTexture(`${d} m`, ''), transparent: true, roughness: 0.9, depthWrite: false }));
+      m.position.set(side < 0 ? laneX0 + 0.02 : laneX1 - 0.02, 2.4, fireZ - d + 1.6);
+      m.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+      root.add(m);
+    }
+  }
+  // biruta (indicador de vento) na metade da raia
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6, 8), std({ color: 0x777777, roughness: 0.6, metalness: 0.5 }));
+  pole.position.set(laneX1 - 1, 3, fireZ - 75);
+  root.add(pole);
+  const sock = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.8, 10, 1, true), std({ color: 0xff6a1a, roughness: 0.8, side: THREE.DoubleSide }));
+  sock.rotation.z = Math.PI / 2;
+  sock.position.set(laneX1 - 1 - 0.9, 5.6, fireZ - 75);
+  sock.name = 'windsock';
+  root.add(sock);
+  // morros ao longe
+  const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), std({ color: 0x8c9a6a, roughness: 1, flatShading: true }));
+  for (const [x, z, sx, sy] of [[-90, -300, 90, 28], [70, -330, 120, 36], [0, -380, 160, 46], [-160, -150, 70, 22], [160, -200, 80, 26]]) {
+    const h = hill.clone();
+    h.scale.set(sx, sy, sx * 0.6);
+    h.position.set(x, 0, z);
+    root.add(h);
+  }
+}
+
 export function buildMap(scene, renderer, mapId = 'ferrugem') {
   const def = MAPS[mapId] || MAPS.ferrugem;
   LAYOUT = makeLayout(def.top);
@@ -586,7 +704,7 @@ export function buildMap(scene, renderer, mapId = 'ferrugem') {
     if (ch === 'A') spawnCells.A.push([x, y]);
     if (ch === 'Z') spawnCells.B.push([x, y]);
   }
-  for (const [team, letter, color] of [['A', 'A', '#ff8a3d'], ['B', 'B', '#3db8ff']]) {
+  for (const [team, letter, color] of def.training ? [] : [['A', 'A', '#ff8a3d'], ['B', 'B', '#3db8ff']]) {
     const cells = spawnCells[team];
     let sx = 0, sz = 0;
     cells.forEach(([x, y]) => { sx += cellToWorld(x); sz += cellToWorld(y); });
@@ -717,6 +835,8 @@ export function buildMap(scene, renderer, mapId = 'ferrugem') {
       root.add(m);
     }
   }
+
+  if (def.training) buildRangeLane(root, addCollider, T, std);
 
   // mural de homenagem: um por mapa, numa parede sorteada a cada partida
   const avoid = T.decor === 'city' || T.decor === 'night' ? [{ x: -14, z: -11 }, { x: 14, z: 11 }, { x: 13, z: -18 }, { x: -13, z: 18 }] : [];

@@ -1,6 +1,7 @@
 // Núcleo da partida: modos, rodadas, disparos, dano, renascimento e câmera.
 import * as THREE from 'three';
 import { StoryMission, missionById, AGENT } from './story.js';
+import { Training } from './training.js';
 import { Player } from './player.js';
 import { Bot } from './bot.js';
 import { TEAMS, FFA_COLORS, BOT_NAMES, WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS } from './config.js';
@@ -87,6 +88,28 @@ export class Game {
     this.player = new Player({ id: 0, name: story ? AGENT.name : playerName(), team: pTeam, color: mode === 'ffa' ? FFA_COLORS[0] : TEAMS[pTeam].color });
     if (story) this.player.setLoadout('kestrel', 'vp9', false, 'katana'); // equipamento padrão da unidade
     else this.player.setLoadout(settings.loadout.primary, settings.loadout.secondary, mode === 'training', settings.loadout.melee);
+    if (mode === 'range') {
+      // Centro de Treinamento: só o jogador, alvos de aço e bambus
+      this.training = new Training(this, this.config);
+      const dojo = this.training.area === 'dojo';
+      const melee = this.config.weapon === 'nodachi' ? 'nodachi' : 'katana';
+      this.player.setLoadout(dojo ? settings.loadout.primary : 'longinus', 'vp9', true, melee);
+      this.bots = [];
+      this.remotes = [];
+      this.combatants = [this.player];
+      this.training.setup();
+      const sp = this.training.playerStart();
+      this.spawnCombatant(this.player, sp.x, sp.z, sp.yaw);
+      if (dojo) { this.player.slot = 'melee'; this.viewmodel.setWeapon(this.player.weapon.def, false); }
+      this.effects.clear();
+      this.phase = 'live';
+      this.phaseT = 0;
+      this.announce(dojo ? 'DOJÔ' : 'ESTANDE DE TIRO', dojo ? (this.training.challenge ? 'Desafio: 60 segundos' : 'Golpe leve: diagonal · pesado: horizontal') : (this.training.challenge ? 'Desafio: 10 alvos, um tiro cada' : 'Alvos de 25 a 200 m'), 3, null, 'roundStart');
+      this.active = true;
+      this.paused = false;
+      this.hud.setupMatch(this);
+      return;
+    }
     if (story) {
       // modo história: a missão monta criminosos, reféns e objetivos
       this.story = new StoryMission(this, missionById(this.config.mission));
@@ -154,6 +177,7 @@ export class Game {
 
   cleanup() {
     if (this.story) { this.story.dispose(); this.story = null; }
+    if (this.training) { this.training.dispose(); this.training = null; }
     for (const c of this.combatants) if (!c.isPlayer && c.model) this.scene.remove(c.model.root);
     for (const b of this.bots) this.scene.remove(b.model.root);
     this.coop = false;
@@ -214,6 +238,7 @@ export class Game {
 
   results() {
     if (this.story) return this.story.results();
+    if (this.training) return this.training.results();
     const mode = this.config.mode;
     const rows = this.combatants.slice().sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
     const p = this.player;
@@ -288,7 +313,7 @@ export class Game {
     if (this.isClient) return this.clientSetLoadout(primary, secondary, melee);
     const p = this.player;
     const mode = this.config.mode;
-    const immediate = mode === 'training' || mode === 'story' || (mode === 'team' && this.phase === 'freeze') || (mode === 'ffa' && p.alive && this.time - (p.spawnTime || 0) < 6);
+    const immediate = mode === 'training' || mode === 'story' || mode === 'range' || (mode === 'team' && this.phase === 'freeze') || (mode === 'ffa' && p.alive && this.time - (p.spawnTime || 0) < 6);
     if (immediate && p.alive) {
       p.setLoadout(primary, secondary, mode === 'training', melee);
       p.resetView();
@@ -378,6 +403,15 @@ export class Game {
     const wallBox = hit ? hit.box : null;
     const wallGround = hit ? hit.ground : false;
     if (hit) _n.set(hit.nx, hit.ny, hit.nz);
+    if (this.training) {
+      // estande: acerto num alvo de aço (com queda e vento no modo realista)
+      const th = this.training.shoot(shooter, o, d, def, best);
+      if (th) {
+        _end.copy(th.point);
+        this.effects.impact(_end, _n.set(0, 0, 1), 'metal');
+        return _end;
+      }
+    }
     let victim = null, part = null;
     oArr[0] = o.x; oArr[1] = o.y; oArr[2] = o.z;
     dArr[0] = d.x; dArr[1] = d.y; dArr[2] = d.z;
@@ -524,6 +558,7 @@ export class Game {
     c.eyePos(_o);
     forward(c.yaw + (c.isPlayer ? c.recoilYaw * DEG : 0), c.pitch, _base);
     // parede no caminho?
+    if (this.training && this.training.slice(c, pm, _o, _base)) { c.shots++; return; }
     const wall = this.world.raycast(_o.x, _o.y, _o.z, _base.x, _base.y, _base.z, def.reach);
     const wallT = wall ? wall.t : def.reach + 0.5;
     let target = null, bestScore = Infinity;
@@ -713,6 +748,7 @@ export class Game {
       b.update(dt, this);
     }
     if (this.story) this.story.update(dt);
+    if (this.training) this.training.update(dt);
     for (const c of this.combatants) {
       if (c.pendingMelee) {
         c.pendingMelee.t -= dt;

@@ -6,6 +6,7 @@ import { MAPS, MAP_IDS } from './map.js';
 import { pwa, isStandalone, platform, promptInstall } from './pwa.js';
 import { CAMPAIGN, missionById, storyProgress } from './story.js';
 import { isTouchDevice } from './touch.js';
+import { trainingBest } from './training.js';
 import { STUDENTS, SCHOOL, CLASSES, SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, getLook, setLook, defaultLook, activeProfile, activeLook, setActiveProfile, camoCanvas, lookColors } from './profiles.js';
 
 const $ = (id) => document.getElementById(id);
@@ -67,6 +68,9 @@ export class Menu {
       case 'install': this.openInstall(); break;
       case 'story': if (app.state === 'ended') app.quitToMenu(); this.openStory(); break;
       case 'story-start': this.startStory(); break;
+      case 'training': if (app.state === 'ended') app.quitToMenu(); this.openTraining(); break;
+      case 'train-range': this.startTraining('range'); break;
+      case 'train-dojo': this.startTraining('dojo'); break;
       case 'coop': this.openCoop(); break;
       case 'quick-training': app.startMatch({ map: settings.match.map, mode: 'training', bots: 6, difficulty: settings.match.difficulty, botsShoot: true, timeLimit: 0, scoreLimit: 0, rounds: 0 }); break;
       case 'loadout': this.openLoadout('main'); break;
@@ -553,6 +557,30 @@ export class Menu {
     this.app.startMatch({ mode: 'story', mission: m.id, map: m.map, difficulty: this.storyDiff || 'soldado', bots: 0, timeLimit: 0, scoreLimit: 0, rounds: 0, botsShoot: true });
   }
 
+  // ---------- centro de treinamento ----------
+  openTraining() {
+    if (!this.trainOpt) this.trainOpt = { ballistics: 'basic', rangeVariant: 'free', weapon: 'katana', dojoVariant: 'free' };
+    const o = this.trainOpt;
+    const best = trainingBest();
+    for (const [id, key] of [['tr-ball', 'ballistics'], ['tr-rvar', 'rangeVariant'], ['tr-weapon', 'weapon'], ['tr-dvar', 'dojoVariant']]) {
+      $(id).querySelectorAll('button').forEach((b) => {
+        b.classList.toggle('active', b.dataset.v === o[key]);
+        b.onclick = () => { o[key] = b.dataset.v; this.openTraining(); };
+      });
+    }
+    $('tr-range-best').textContent = `Recordes do desafio: básica ${best['range-basic'] || 0} · realista ${best['range-real'] || 0} pontos`;
+    $('tr-dojo-best').textContent = `Recordes do desafio: katana ${best['dojo-katana'] || 0} · nodachi ${best['dojo-nodachi'] || 0} pontos`;
+    if (this.current !== 'screen-training') this.show('screen-training');
+  }
+
+  startTraining(area) {
+    const o = this.trainOpt;
+    this.app.startMatch({
+      mode: 'range', map: 'estande', area, bots: 0, timeLimit: 0, scoreLimit: 0, rounds: 0, botsShoot: false, difficulty: 'soldado',
+      variant: area === 'range' ? o.rangeVariant : o.dojoVariant, ballistics: o.ballistics, weapon: o.weapon,
+    });
+  }
+
   showStoryEnd(r) {
     const st = r.story;
     $('end-title').textContent = r.title;
@@ -567,7 +595,7 @@ export class Menu {
     board.innerHTML = '';
     const t = document.createElement('table');
     t.className = 'story-score';
-    t.innerHTML = '<thead><tr><th>Relatório da operação</th><th>Qtd.</th><th>Pontos</th></tr></thead>';
+    t.innerHTML = `<thead><tr><th>${st.training ? 'Relatório do treino' : 'Relatório da operação'}</th><th>Qtd.</th><th>Pontos</th></tr></thead>`;
     const tb = document.createElement('tbody');
     for (const [label, n, pts] of st.lines) {
       const tr = document.createElement('tr');
@@ -577,14 +605,17 @@ export class Menu {
     }
     t.appendChild(tb);
     board.appendChild(t);
-    if (st.success && st.isBest) { const p = document.createElement('p'); p.className = 'story-best'; p.textContent = 'Novo recorde nesta missão!'; board.appendChild(p); }
+    if (st.success && st.isBest) { const p = document.createElement('p'); p.className = 'story-best'; p.textContent = st.training ? 'Novo recorde neste desafio!' : 'Novo recorde nesta missão!'; board.appendChild(p); }
     $('end-story').classList.remove('hidden');
-    $('end-restart').textContent = st.success ? 'Repetir missão' : 'Tentar de novo';
+    $('end-story').textContent = st.backLabel || 'Missões';
+    $('end-story').dataset.action = st.backAction || 'story';
+    $('end-restart').textContent = st.training ? 'Repetir desafio' : st.success ? 'Repetir missão' : 'Tentar de novo';
     this.reset('screen-end');
   }
 
   showEnd(r) {
     $('end-story').classList.add('hidden');
+    $('end-story').dataset.action = 'story';
     $('end-restart').textContent = 'Jogar novamente';
     if (r.story) { this.showStoryEnd(r); return; }
     $('end-title').textContent = r.title;

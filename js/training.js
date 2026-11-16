@@ -1,0 +1,569 @@
+// Centro de Treinamento: estande de tiro de longa distância e dojô de cortes em bambu.
+//
+// Estande: alvos de aço com anéis a 25, 50, 100, 150 e 200 m. No modo realista, o projétil
+// cai com a gravidade (arma zerada a 100 m) e é desviado pelo vento indicado na biruta.
+// Dojô: suportes de bambu cortados pela espada na altura da mira; golpe leve corta na diagonal
+// (alternando o lado) e golpe pesado corta na horizontal.
+import * as THREE from 'three';
+import { settings, saveSettings } from './settings.js';
+import { RANGE, cellToWorld } from './map.js';
+import { pick, rand, shuffle } from './utils.js';
+
+const G = 9.81;
+const SOUND = 343; // m/s: o "tim" do aço chega depois do disparo nas distâncias longas
+const _p = new THREE.Vector3();
+const _n = new THREE.Vector3(0, 0, 1);
+
+// velocidade de saída aproximada por tipo de arma (m/s), usada no modo realista
+const MUZZLE = { sniper: 880, ar: 715, ar2: 900, smg: 400, pistol: 370, revolver: 430, shotgun: 400, gauntlet: 3000 };
+
+export function trainingBest() {
+  if (!settings.training || typeof settings.training !== 'object') settings.training = {};
+  return settings.training;
+}
+
+// face do alvo: anéis numerados (canvas reaproveitado)
+let faceTex = null;
+function targetFace() {
+  if (faceTex) return faceTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  drawFace(c.getContext('2d'), 256);
+  faceTex = new THREE.CanvasTexture(c);
+  faceTex.colorSpace = THREE.SRGBColorSpace;
+  return faceTex;
+}
+function drawFace(ctx, s, highlight = false) {
+  const R = s / 2;
+  ctx.clearRect(0, 0, s, s);
+  for (let i = 10; i >= 1; i--) {
+    ctx.beginPath();
+    ctx.arc(R, R, (R * i) / 10, 0, Math.PI * 2);
+    ctx.fillStyle = i <= 2 ? '#c8262e' : i % 2 ? '#f1ece0' : (highlight ? '#ff9a4a' : '#2a2d31');
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+export class Training {
+  constructor(game, cfg) {
+    this.game = game;
+    this.cfg = cfg;
+    this.area = cfg.area === 'dojo' ? 'dojo' : 'range';
+    this.challenge = cfg.variant === 'challenge';
+    this.real = cfg.ballistics === 'real';
+    this.objects = [];
+    this.timers = [];
+    this.plates = [];
+    this.stalks = [];
+    this.pieces = [];
+    this.stats = { shots: 0, hits: 0, points: 0, best: 0, byDist: {} };
+    this.cuts = { total: 0, diag: 0, horiz: 0, combo: 0, bestCombo: 0, score: 0, lastT: -9, good: 0, wrong: 0 };
+    this.ended = false;
+  }
+
+  after(sec, fn) { this.timers.push({ t: this.game.time + sec, fn }); }
+
+  // ---------- montagem ----------
+  setup() {
+    document.body.classList.add('training');
+    this.buildHud();
+    this.buildPlates();
+    this.buildStalks();
+    this.wind = this.real ? Math.round(rand(1.5, 6) * 10) / 10 * (Math.random() < 0.5 ? -1 : 1) : 0;
+    this.orientWindsock();
+    if (this.area === 'range' && this.challenge) {
+      // desafio: 10 alvos em ordem de distância, um disparo para cada
+      this.queue = [];
+      for (const d of RANGE.distances) for (const p of shuffle(this.plates.filter((q) => q.d === d))) this.queue.push(p);
+      this.qi = 0;
+      this.highlight(this.queue[0]);
+    }
+    if (this.area === 'dojo' && this.challenge) {
+      this.timeLeft = 60;
+      this.pickStalk();
+    }
+    this.render();
+  }
+
+  playerStart() {
+    if (this.area === 'dojo') return { x: 0, z: cellToWorld(20), yaw: Math.PI };
+    return { x: 0, z: RANGE.fireZ - 0.3, yaw: 0 };
+  }
+
+  buildPlates() {
+    const g = this.game;
+    const layout = { 25: [-9, 9], 50: [-7, 7], 100: [-5.5, 5.5], 150: [-1.6, 1.6], 200: [-4, 4] };
+    const radius = { 25: 0.25, 50: 0.3, 100: 0.42, 150: 0.55, 200: 0.7 };
+    const post = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.8 });
+    const steel = new THREE.MeshStandardMaterial({ color: 0x3a3d40, roughness: 0.5, metalness: 0.7 });
+    for (const d of RANGE.distances) {
+      for (const x of layout[d]) {
+        const R = radius[d];
+        const z = RANGE.fireZ - d;
+        const grp = new THREE.Group();
+        grp.position.set(x, 0, z);
+        const hingeY = 1.55 + R;
+        for (const sx of [-1, 1]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, hingeY + 0.1, 0.08), post);
+          leg.position.set(sx * (R + 0.15), (hingeY + 0.1) / 2, 0);
+          leg.castShadow = true;
+          grp.add(leg);
+        }
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(2 * R + 0.38, 0.08, 0.08), post);
+        bar.position.set(0, hingeY + 0.06, 0);
+        grp.add(bar);
+        const pivot = new THREE.Group();
+        pivot.position.set(0, hingeY, 0);
+        grp.add(pivot);
+        const chain = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.03), steel);
+        chain.position.set(0, -0.1, 0);
+        pivot.add(chain);
+        const plate = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.03, 40), [steel, new THREE.MeshStandardMaterial({ map: targetFace(), roughness: 0.7 }), steel]);
+        plate.rotation.x = Math.PI / 2;
+        plate.position.set(0, -0.2 - R, 0);
+        plate.castShadow = true;
+        pivot.add(plate);
+        const glow = new THREE.Mesh(new THREE.RingGeometry(R * 1.08, R * 1.25, 40), new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.9, fog: false, side: THREE.DoubleSide }));
+        glow.position.set(0, -0.2 - R, 0.03);
+        glow.visible = false;
+        pivot.add(glow);
+        g.scene.add(grp);
+        this.objects.push(grp);
+        this.plates.push({ d, x, z, R, cy: hingeY - 0.2 - R, pivot, glow, swing: 0, vel: 0, hits: [] });
+      }
+    }
+  }
+
+  buildStalks() {
+    const g = this.game;
+    this.bambooMat = new THREE.MeshStandardMaterial({ map: bambooTex(), roughness: 0.6 });
+    this.innerMat = new THREE.MeshStandardMaterial({ color: 0xe9e2b8, roughness: 0.8 });
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6a4a2e, roughness: 0.85 });
+    const xs = [-15, -9, -3, 3, 9, 15];
+    const zs = [cellToWorld(24), cellToWorld(28)];
+    for (const z of zs) for (const x of xs) {
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.55), wood);
+      base.position.set(x, 0.07, z);
+      base.castShadow = true;
+      g.scene.add(base);
+      this.objects.push(base);
+      const mark = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.55, 32), new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+      mark.rotation.x = -Math.PI / 2;
+      mark.position.set(x, 0.16, z);
+      mark.visible = false;
+      g.scene.add(mark);
+      this.objects.push(mark);
+      const s = { x, z, r: 0.055, full: 1.75, h: 1.75, mesh: null, cap: null, mark };
+      this.resetStalk(s);
+      this.stalks.push(s);
+    }
+  }
+
+  resetStalk(s) {
+    s.h = s.full;
+    s.cutCount = 0;
+    this.drawStalk(s, null);
+  }
+
+  // desenha o tronco de 0,14 m até a altura h; o topo pode ter o corte inclinado (ângulo a)
+  drawStalk(s, cutAngle) {
+    const g = this.game;
+    if (s.mesh) s.mesh.removeFromParent();
+    if (s.cap) s.cap.removeFromParent();
+    const len = s.h - 0.14;
+    const geo = new THREE.CylinderGeometry(s.r, s.r * 1.06, len, 14, 1, false);
+    geo.translate(0, 0.14 + len / 2, 0);
+    s.mesh = new THREE.Mesh(geo, this.bambooMat);
+    s.mesh.position.set(s.x, 0, s.z);
+    s.mesh.castShadow = true;
+    g.scene.add(s.mesh);
+    if (cutAngle != null) {
+      // face do corte (elipse clara) inclinada conforme o golpe
+      const cap = new THREE.Mesh(new THREE.CircleGeometry(s.r * 1.02, 16), this.innerMat);
+      cap.rotation.x = -Math.PI / 2;
+      const holder = new THREE.Group();
+      holder.add(cap);
+      holder.position.set(s.x, s.h + 0.002, s.z);
+      holder.rotation.set(0, s.cutYaw || 0, cutAngle);
+      cap.scale.set(1 / Math.cos(Math.min(1.2, Math.abs(cutAngle))), 1, 1);
+      g.scene.add(holder);
+      s.cap = holder;
+    } else s.cap = null;
+  }
+
+  orientWindsock() {
+    const sock = this.game.map.root.getObjectByName('windsock');
+    if (!sock) return;
+    const w = this.wind;
+    sock.visible = true;
+    // aponta para onde o vento sopra; murcha quando não há vento
+    const k = Math.min(1, Math.abs(w) / 6);
+    sock.rotation.set(0, 0, w >= 0 ? -Math.PI / 2 : Math.PI / 2);
+    sock.position.x = RANGE.laneX1 - 1 + (w >= 0 ? 0.9 : -0.9) * Math.max(0.25, k);
+    sock.rotation.x = (1 - k) * 0.9;
+  }
+
+  dispose() {
+    document.body.classList.remove('training');
+    for (const o of this.objects) o.removeFromParent();
+    for (const s of this.stalks) { if (s.mesh) s.mesh.removeFromParent(); if (s.cap) s.cap.removeFromParent(); }
+    for (const p of this.pieces) p.mesh.removeFromParent();
+    this.objects = [];
+    if (this.hud) this.hud.root.remove();
+    this.hud = null;
+  }
+
+  // ---------- HUD ----------
+  buildHud() {
+    const root = document.createElement('div');
+    root.id = 'train-hud';
+    root.innerHTML = `
+      <div class="tr-panel"><h4></h4><div class="tr-lines"></div><div class="tr-timer hidden"></div></div>
+      <div class="tr-scope hidden"><canvas width="180" height="180"></canvas><p></p></div>
+      <div class="tr-pop"></div>`;
+    document.getElementById('hud').appendChild(root);
+    const q = (s) => root.querySelector(s);
+    this.hud = { root, title: q('.tr-panel h4'), lines: q('.tr-lines'), timer: q('.tr-timer'), scope: q('.tr-scope'), canvas: q('.tr-scope canvas'), cap: q('.tr-scope p'), pop: q('.tr-pop') };
+  }
+
+  pop(text, color = '#6dff9e') {
+    const el = this.hud.pop;
+    el.textContent = text;
+    el.style.color = color;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+  }
+
+  zoneOf() {
+    const p = this.game.player.pos;
+    return p.z > cellToWorld(18) ? 'dojo' : 'range';
+  }
+
+  render() {
+    if (!this.hud) return;
+    const zone = this.zoneOf();
+    this.zone = zone;
+    const L = [];
+    if (zone === 'range') {
+      this.hud.title.textContent = `Estande de longa distância · ${this.real ? 'balística realista' : 'balística básica'}`;
+      const st = this.stats;
+      const acc = st.shots ? Math.round((st.hits / st.shots) * 100) : 0;
+      L.push(`Disparos ${st.shots} · acertos ${st.hits} (${acc}%) · pontos ${st.points}`);
+      for (const d of RANGE.distances) { const b = st.byDist[d]; if (b) L.push(`${d} m: ${b.h}/${b.s} · melhor ${b.best}`); }
+      if (this.real) {
+        const w = this.wind;
+        L.push(`Vento lateral: ${Math.abs(w).toFixed(1)} m/s ${w > 0 ? '→ (para a direita)' : w < 0 ? '← (para a esquerda)' : ''} · arma zerada a 100 m`);
+      }
+      if (this.queue && !this.ended) {
+        const t = this.queue[this.qi];
+        if (t) L.push(`Desafio: alvo ${this.qi + 1}/10 · ${t.d} m (marcado em laranja)`);
+      } else if (!this.queue) L.push('Livre: atire à vontade. B troca de arma.');
+    } else {
+      const c = this.cuts;
+      this.hud.title.textContent = 'Dojô · cortes em bambu';
+      L.push(`Cortes ${c.total} · diagonais ${c.diag} · horizontais ${c.horiz}`);
+      L.push(`Sequência ${c.combo} · melhor ${c.bestCombo}`);
+      if (this.challenge && this.area === 'dojo') {
+        L.push(`Pontos ${c.score} · certos ${c.good} · tipo errado ${c.wrong}`);
+        if (this.want) L.push(`Corte pedido: <b>${this.want === 'diag' ? 'DIAGONAL (golpe leve)' : 'HORIZONTAL (golpe pesado)'}</b> no bambu marcado`);
+      } else L.push('Golpe leve: diagonal · golpe pesado (botão direito): horizontal · mire na altura do corte');
+    }
+    this.hud.lines.innerHTML = L.map((x) => `<div>${x}</div>`).join('');
+  }
+
+  drawScope(plate, last) {
+    const c = this.hud.canvas;
+    const ctx = c.getContext('2d');
+    const s = c.width;
+    drawFace(ctx, s);
+    for (const h of plate.hits.slice(-6)) {
+      const px = s / 2 + (h.dx / plate.R) * (s / 2);
+      const py = s / 2 - (h.dy / plate.R) * (s / 2);
+      ctx.beginPath();
+      ctx.arc(px, py, h === last ? 6 : 4, 0, Math.PI * 2);
+      ctx.fillStyle = h === last ? '#ffd166' : '#555';
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.stroke();
+    }
+    this.hud.scope.classList.remove('hidden');
+    const cm = (v) => `${Math.abs(Math.round(v * 100))} cm`;
+    const dir = [];
+    if (Math.abs(last.dy) > 0.02) dir.push(`${cm(last.dy)} ${last.dy > 0 ? 'acima' : 'abaixo'}`);
+    if (Math.abs(last.dx) > 0.02) dir.push(`${cm(last.dx)} à ${last.dx > 0 ? 'direita' : 'esquerda'}`);
+    this.hud.cap.textContent = `${plate.d} m · ${last.score} pontos${dir.length ? ` · ${dir.join(', ')} do centro` : ' · no centro!'}`;
+  }
+
+  highlight(plate) {
+    for (const p of this.plates) p.glow.visible = p === plate;
+  }
+
+  // ---------- disparos no estande ----------
+  // Chamado pelo jogo para cada projétil do jogador; devolve o ponto de impacto se acertou um alvo.
+  shoot(shooter, o, d, def, wallT) {
+    if (!shooter.isPlayer || this.ended) return null;
+    const v = MUZZLE[def.model.type] || 800;
+    let best = null;
+    for (const p of this.plates) {
+      if (d.z >= -1e-4) continue;
+      const t = (p.z - o.z) / d.z;
+      if (t <= 0 || t > wallT + 0.01) continue;
+      let ix = o.x + d.x * t, iy = o.y + d.y * t;
+      if (this.real) {
+        const tof = t / v, tz = 100 / v;
+        iy += -0.5 * G * tof * tof + 0.5 * G * tz * tz * (t / 100); // queda relativa à linha de visada zerada a 100 m
+        ix += this.wind * tof * 0.6; // deriva pelo vento (aproximação)
+      }
+      const dx = ix - p.x, dy = iy - p.cy;
+      const r = Math.hypot(dx, dy);
+      if (r <= p.R && (!best || t < best.t)) best = { p, t, dx, dy, r, ix, iy };
+    }
+    this.stats.shots++;
+    if (!best) {
+      // erro: atribui ao alvo mais próximo da linha de tiro para a estatística por distância
+      let near = null, nd = Infinity;
+      for (const p of this.plates) {
+        const t = (p.z - o.z) / d.z;
+        if (t <= 0) continue;
+        const e = Math.hypot(o.x + d.x * t - p.x, o.y + d.y * t - p.cy) / t;
+        if (e < nd) { nd = e; near = p; }
+      }
+      if (near && nd < 0.03) this.addDist(near.d, false, 0);
+      if (this.challenge) this.challengeShot(null);
+      this.render();
+      return null;
+    }
+    const p = best.p;
+    const score = Math.max(1, 10 - Math.floor((best.r / p.R) * 10));
+    const hit = { dx: best.dx, dy: best.dy, score };
+    p.hits.push(hit);
+    p.vel += 2.5 + score * 0.15;
+    this.stats.hits++;
+    this.stats.points += score;
+    this.addDist(p.d, true, score);
+    this.drawScope(p, hit);
+    // o som do aço chega depois, conforme a distância
+    const g = this.game;
+    const ring = () => g.audio.beep(2600 - p.d * 4, 0.18, Math.max(0.05, 0.3 - p.d / 900));
+    if (p.d > 40) this.after(p.d / SOUND, ring); else ring();
+    this.pop(`${p.d} m · ${score}`, score >= 9 ? '#ffd166' : '#6dff9e');
+    if (this.challenge) this.challengeShot(p, score);
+    this.render();
+    _p.set(best.ix, best.iy, p.z + 0.02);
+    return { point: _p, t: best.t };
+  }
+
+  addDist(d, hit, score) {
+    const b = this.stats.byDist[d] || (this.stats.byDist[d] = { s: 0, h: 0, best: 0, pts: 0 });
+    b.s++;
+    if (hit) { b.h++; b.pts += score; b.best = Math.max(b.best, score); }
+  }
+
+  challengeShot(plate, score = 0) {
+    const t = this.queue[this.qi];
+    if (!t) return;
+    const ok = plate === t;
+    t.result = ok ? score : 0;
+    this.qi++;
+    if (this.qi >= this.queue.length) { this.highlight(null); this.finish(); return; }
+    this.highlight(this.queue[this.qi]);
+  }
+
+  // ---------- cortes no dojô ----------
+  // Chamado pelo jogo quando o golpe da espada do jogador se completa.
+  slice(c, pm, eye, fwd) {
+    if (!c.isPlayer || this.ended) return false;
+    const reach = pm.def.reach + 0.35;
+    let best = null, bd = Infinity;
+    for (const s of this.stalks) {
+      if (s.h < 0.5) continue;
+      const dx = s.x - eye.x, dz = s.z - eye.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > reach) continue;
+      const fl = Math.hypot(fwd.x, fwd.z) || 1;
+      const ang = Math.acos(Math.max(-1, Math.min(1, (dx * fwd.x + dz * fwd.z) / (dist * fl))));
+      if (ang > pm.def.arc + 0.25 && dist > 0.7) continue;
+      if (dist + ang < bd) { bd = dist + ang; best = s; }
+    }
+    if (!best) return false;
+    const s = best;
+    const dist = Math.hypot(s.x - eye.x, s.z - eye.z);
+    const fl = Math.hypot(fwd.x, fwd.z) || 1;
+    const aimY = eye.y + (fwd.y / fl) * dist;
+    const cutY = Math.max(0.45, Math.min(s.h - 0.12, aimY));
+    const heavy = pm.heavy;
+    const dir = this.game.viewmodel.meleeDir || 1;
+    const angle = heavy ? 0 : 0.62 * dir;
+    const oldH = s.h;
+    s.h = cutY;
+    s.cutYaw = Math.atan2(s.x - eye.x, s.z - eye.z);
+    s.cutCount++;
+    this.drawStalk(s, angle);
+    this.dropPiece(s, cutY, oldH, angle, s.cutYaw);
+    const g = this.game;
+    _p.set(s.x, cutY, s.z);
+    g.effects.slash(_p, fwd);
+    g.audio.slashHit(_p);
+    g.audio.beep(heavy ? 520 : 760, 0.06, 0.12);
+    // estatística e desafio
+    const k = this.cuts;
+    k.total++;
+    if (heavy) k.horiz++; else k.diag++;
+    k.combo = g.time - k.lastT < 2.5 ? k.combo + 1 : 1;
+    k.lastT = g.time;
+    k.bestCombo = Math.max(k.bestCombo, k.combo);
+    if (this.challenge) {
+      if (s === this.target) {
+        const right = (this.want === 'horiz') === heavy;
+        const mult = Math.min(5, k.combo);
+        const pts = (right ? 100 : 40) * mult;
+        k.score += pts;
+        if (right) k.good++; else k.wrong++;
+        this.pop(right ? `CORTE PERFEITO +${pts}` : `TIPO ERRADO +${pts}`, right ? '#ffd166' : '#ffb057');
+        this.pickStalk();
+      } else {
+        k.score += 10;
+        k.combo = 0;
+        this.pop('+10 · bambu não marcado', '#cfd6de');
+      }
+    } else this.pop(heavy ? 'HORIZONTAL' : 'DIAGONAL', '#6dff9e');
+    if (s.h < 0.6) this.after(1.6, () => this.resetStalk(s));
+    this.render();
+    return true;
+  }
+
+  dropPiece(s, y0, y1, angle, yaw) {
+    const g = this.game;
+    const len = y1 - y0;
+    const geo = new THREE.CylinderGeometry(s.r, s.r, len, 12);
+    const mesh = new THREE.Mesh(geo, this.bambooMat);
+    mesh.castShadow = true;
+    mesh.position.set(s.x, y0 + len / 2, s.z);
+    g.scene.add(mesh);
+    // escorrega pela face do corte e tomba
+    const side = Math.sign(angle) || (Math.random() < 0.5 ? -1 : 1);
+    const vx = Math.cos(yaw) * side * (angle ? 1.4 : 0.5) + Math.sin(yaw) * 0.6;
+    const vz = -Math.sin(yaw) * side * (angle ? 1.4 : 0.5) + Math.cos(yaw) * 0.6;
+    this.pieces.push({ mesh, len, vy: 0.5, vx, vz, spinX: rand(-3, 3), spinZ: side * rand(2, 5), life: 3.2 });
+  }
+
+  pickStalk() {
+    const opts = this.stalks.filter((s) => s !== this.target && s.h > 0.9);
+    this.target = pick(opts.length ? opts : this.stalks);
+    this.want = Math.random() < 0.55 ? 'diag' : 'horiz';
+    for (const s of this.stalks) s.mark.visible = s === this.target;
+  }
+
+  // ---------- quadro ----------
+  update(dt) {
+    const g = this.game;
+    if (!g.active || !this.hud) return;
+    for (let i = this.timers.length - 1; i >= 0; i--) if (g.time >= this.timers[i].t) { const t = this.timers.splice(i, 1)[0]; t.fn(); }
+    // alvos balançam e voltam
+    for (const p of this.plates) {
+      p.vel += (-p.swing * 30 - p.vel * 3.5) * dt;
+      p.swing += p.vel * dt;
+      p.pivot.rotation.x = -p.swing * 0.5;
+    }
+    // pedaços de bambu caindo
+    for (let i = this.pieces.length - 1; i >= 0; i--) {
+      const pc = this.pieces[i];
+      pc.life -= dt;
+      const m = pc.mesh;
+      if (m.position.y > pc.len * 0.15 + 0.05) {
+        pc.vy -= G * dt;
+        m.position.x += pc.vx * dt; m.position.z += pc.vz * dt; m.position.y += pc.vy * dt;
+        m.rotation.x += pc.spinX * dt; m.rotation.z += pc.spinZ * dt;
+      } else {
+        m.position.y = 0.06;
+        m.rotation.x = Math.PI / 2 * Math.sign(m.rotation.x || 1);
+        pc.vx *= 0.9; pc.vz *= 0.9;
+      }
+      if (pc.life < 0.6) m.scale.setScalar(Math.max(0.01, pc.life / 0.6));
+      if (pc.life <= 0) { m.removeFromParent(); m.geometry.dispose(); this.pieces.splice(i, 1); }
+    }
+    if (this.area === 'dojo' && this.challenge && !this.ended) {
+      this.timeLeft -= dt;
+      this.hud.timer.classList.remove('hidden');
+      this.hud.timer.textContent = `TEMPO · ${Math.max(0, Math.ceil(this.timeLeft))} s`;
+      if (this.target) this.target.mark.material.opacity = 0.55 + Math.sin(g.time * 8) * 0.35;
+      if (this.timeLeft <= 0) this.finish();
+    }
+    if (this.zoneOf() !== this.zone) this.render();
+  }
+
+  // ---------- fim do desafio ----------
+  finish() {
+    if (this.ended) return;
+    this.ended = true;
+    const g = this.game;
+    g.phase = 'matchEnd';
+    g.phaseT = 2.6;
+    g.announce('DESAFIO CONCLUÍDO', this.area === 'dojo' ? `${this.cuts.score} pontos` : `${this.challengeScore()} pontos`, 2.4, '#6dff9e', 'matchEnd', { win: true });
+  }
+
+  challengeScore() {
+    // pontos do anel multiplicados pela distância (25 m vale 1×, 200 m vale 8×)
+    return this.queue.reduce((a, p) => a + (p.result || 0) * (p.d / 25), 0);
+  }
+
+  results() {
+    const g = this.game;
+    const p = g.player;
+    const lines = [];
+    let score = 0, title, stars = 0, key;
+    if (this.area === 'range') {
+      const ladder = this.queue || [];
+      for (const t of ladder) { const pts = (t.result || 0) * (t.d / 25); lines.push([`Alvo a ${t.d} m (${t.x < 0 ? 'esquerda' : 'direita'})`, t.result ? `${t.result} no anel` : 'errou', pts]); score += pts; }
+      title = 'Estande · desafio de 10 tiros';
+      stars = score >= 380 ? 3 : score >= 230 ? 2 : score > 0 ? 1 : 0;
+      key = `range-${this.real ? 'real' : 'basic'}`;
+    } else {
+      const k = this.cuts;
+      lines.push(['Cortes no bambu marcado, tipo certo', k.good, k.good * 100]);
+      lines.push(['Cortes no bambu marcado, tipo errado', k.wrong, k.wrong * 40]);
+      lines.push(['Melhor sequência', k.bestCombo, 0]);
+      lines.push(['Total (com multiplicador de sequência)', k.total, k.score]);
+      score = k.score;
+      title = 'Dojô · desafio de 60 segundos';
+      stars = score >= 2400 ? 3 : score >= 1300 ? 2 : score > 0 ? 1 : 0;
+      key = `dojo-${this.cfg.weapon || 'katana'}`;
+    }
+    score = Math.round(score);
+    const bestAll = trainingBest();
+    const prev = bestAll[key] || 0;
+    if (score > prev) { bestAll[key] = score; saveSettings(); }
+    return {
+      mode: 'range', rows: [p], title: 'DESAFIO CONCLUÍDO', subtitle: title, color: '#6dff9e', playerWon: true,
+      acc: p.shots ? Math.round((p.hits / p.shots) * 100) : 0, hs: 0, time: g.time, teamScore: { A: 0, B: 0 },
+      story: { training: true, success: true, lines, score, stars, best: Math.max(prev, score), isBest: score > prev, backLabel: 'Centro de treinamento', backAction: 'training' },
+    };
+  }
+}
+
+// textura do bambu: verde com nós claros a cada ~35 cm
+let bTex = null;
+function bambooTex() {
+  if (bTex) return bTex;
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 256;
+  const ctx = c.getContext('2d');
+  const grd = ctx.createLinearGradient(0, 0, 64, 0);
+  grd.addColorStop(0, '#5f7d2c'); grd.addColorStop(0.5, '#8fae46'); grd.addColorStop(1, '#5a7628');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, 64, 256);
+  for (let i = 0; i < 40; i++) { ctx.fillStyle = `rgba(40,60,20,${Math.random() * 0.15})`; ctx.fillRect(Math.random() * 64, 0, 1.5, 256); }
+  for (const y of [40, 128, 216]) {
+    ctx.fillStyle = '#c9c48a'; ctx.fillRect(0, y, 64, 5);
+    ctx.fillStyle = 'rgba(40,50,20,0.5)'; ctx.fillRect(0, y + 5, 64, 2);
+  }
+  bTex = new THREE.CanvasTexture(c);
+  bTex.wrapS = bTex.wrapT = THREE.RepeatWrapping;
+  bTex.repeat.set(1, 2);
+  bTex.colorSpace = THREE.SRGBColorSpace;
+  return bTex;
+}

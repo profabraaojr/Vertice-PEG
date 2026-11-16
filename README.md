@@ -111,6 +111,25 @@ Detalhes de cada missão:
 
 Falhas comuns: o agente ser abatido.
 
+## Centro de treinamento
+
+No menu principal, **Centro de treinamento** leva a um complexo com duas áreas (dá para ir de uma à outra a pé):
+
+**Estande de longa distância**
+- Raia de 24 m de largura que sai do galpão de tiro e vai até uma barreira de terra a 230 m, com placas de distância e uma biruta.
+- Alvos de aço com anéis de 1 a 10 pontos a 25, 50, 100, 150 e 200 m. Ao serem atingidos, balançam, e o "tim" do aço chega com atraso nas distâncias longas (velocidade do som).
+- Painel de observação: mostra a face do alvo com os últimos impactos e diz a distância do centro (por exemplo, "6 cm abaixo, 4 cm à direita").
+- **Balística básica:** o tiro segue reto até o alvo.
+- **Balística realista:** o projétil cai com a gravidade (arma zerada a 100 m) e é desviado por um vento lateral sorteado; é preciso mirar acima e contra o vento nas distâncias longas.
+- **Livre** ou **Desafio de 10 tiros**: dois alvos por distância, da mais curta à mais longa, um disparo cada; os pontos do anel valem mais quanto maior a distância (25 m vale 1×, 200 m vale 8×).
+
+**Dojô · cortes em bambu**
+- Doze suportes de bambu. Golpe leve corta na diagonal (alternando o lado); golpe pesado (botão direito ou MIRA) corta na horizontal. O corte acontece na altura da mira, a parte de cima cai, e o bambu é reposto quando fica curto.
+- Katana ou nodachi (que alcança mais longe).
+- **Livre** ou **Desafio de 60 segundos**: corte o bambu marcado com o tipo de corte pedido (100 pontos; tipo errado, 40). Cortes seguidos em até 2,5 s multiplicam os pontos, até 5×.
+
+Os recordes dos desafios ficam salvos no aparelho.
+
 ## Perfis
 
 O jogo homenageia os alunos da Escola Estadual Cívico Militar Joaquim Nunes Rocha (1º, 2º e 3º ano PEG). Em **Perfil**, cada aluno escolhe o próprio nome entre os 19 perfis (Ana, Carlos, Damarys, Daniel, David, Enzo, Eros, Gustavo Correa, Gustavo Luiz, Gustavo Hideki, Jhon, João, Kayleb, Larissa, Luiz, Matheus, Rafael, Renato e Tamyris) e personaliza:
@@ -228,6 +247,7 @@ js/touchlayout.js   comandos, layouts prontos, perfis, geometria e exportação 
 js/controleditor.js editor "Personalizar controles"
 js/story.js         modo história: campanha, motor de missões, rendição, prisão, reféns e relatório
 js/hands.js         mãos enluvadas articuladas da visão em primeira pessoa
+js/training.js      centro de treinamento: estande de longa distância e dojô de bambus
 js/pwa.js           instalação como aplicativo e registro do service worker
 js/lobby.js         sala de espera: times, pronto, configurações do anfitrião e chat
 js/chat.js          chat durante a partida

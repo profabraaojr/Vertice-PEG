@@ -82,6 +82,7 @@
           <button class="btn big" data-action="story" id="btn-story">Modo História</button>
           <button class="btn big" data-action="coop">Multijogador</button>
           <button class="btn big" data-action="quick-training">Treinamento rápido</button>
+          <button class="btn big" data-action="training" id="btn-training">Centro de treinamento</button>
           <button class="btn big" data-action="profile">Perfil</button>
           <button class="btn big" data-action="loadout">Arsenal</button>
           <button class="btn big" data-action="settings">Configurações</button>
@@ -115,6 +116,35 @@
           <div class="grow"></div>
           <button class="btn primary" data-action="story-start" id="sb-start">Iniciar missão</button>
         </footer>
+      </div>
+    </section>
+
+    <!-- centro de treinamento -->
+    <section class="screen" id="screen-training">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Centro de treinamento</h2>
+          <p>Estande de tiro de longa distância e dojô de cortes em bambu. As duas áreas ficam no mesmo complexo: dá para ir de uma à outra a pé.</p></header>
+        <div class="train-grid">
+          <div class="train-card">
+            <h3>Estande de longa distância</h3>
+            <p>Alvos de aço a 25, 50, 100, 150 e 200 metros, com anéis de 1 a 10 pontos. O painel de observação mostra onde cada tiro acertou. O som do aço chega com atraso nas distâncias longas.</p>
+            <label class="opt"><span>Balística</span><div class="seg" id="tr-ball"><button data-v="basic">Básica (tiro reto)</button><button data-v="real">Realista (queda e vento)</button></div></label>
+            <p class="muted small">Realista: o projétil cai com a gravidade (arma zerada a 100 m) e o vento lateral o desvia; mire acima e contra o vento nas distâncias longas.</p>
+            <label class="opt"><span>Modo</span><div class="seg" id="tr-rvar"><button data-v="free">Livre</button><button data-v="challenge">Desafio: 10 tiros</button></div></label>
+            <p class="muted small" id="tr-range-best"></p>
+            <button class="btn primary" data-action="train-range">Ir para o estande</button>
+          </div>
+          <div class="train-card">
+            <h3>Dojô · cortes em bambu</h3>
+            <p>Golpe leve corta na diagonal (alternando o lado); golpe pesado, no botão direito ou MIRA, corta na horizontal. O corte acontece na altura da mira, e a parte de cima cai.</p>
+            <label class="opt"><span>Espada</span><div class="seg" id="tr-weapon"><button data-v="katana">Katana</button><button data-v="nodachi">Nodachi</button></div></label>
+            <label class="opt"><span>Modo</span><div class="seg" id="tr-dvar"><button data-v="free">Livre</button><button data-v="challenge">Desafio: 60 segundos</button></div></label>
+            <p class="muted small">Desafio: corte o bambu marcado com o tipo de corte pedido. Cortes seguidos em até 2,5 s multiplicam os pontos (até 5×).</p>
+            <p class="muted small" id="tr-dojo-best"></p>
+            <button class="btn primary" data-action="train-dojo">Ir para o dojô</button>
+          </div>
+        </div>
+        <footer class="panel-foot"><button class="btn" data-action="back">Voltar</button></footer>
       </div>
     </section>
 
