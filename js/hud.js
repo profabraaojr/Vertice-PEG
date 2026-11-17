@@ -186,7 +186,7 @@ export class HUD {
     const w = p.weapon;
     const def = w.def;
     const scoped = p.alive && p.zoomLevel > 0;
-    el.scope.classList.toggle('hidden', !scoped);
+    el.scope.classList.add('hidden'); // a luneta é desenhada por ScopeView (js/scope.js)
     const hideCross = !p.alive || scoped || p.ads > 0.6 || (def.zoom && !scoped) || p.sprintBlend > 0.5;
     el.crosshair.classList.toggle('hidden', hideCross);
     el.crosshair.classList.toggle('melee', !!def.melee);

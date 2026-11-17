@@ -625,3 +625,18 @@ body.training #topbar, body.training #train-stats, body.training #scoreboard, bo
 body.touch .tr-panel { width: 250px; font-size: 11.5px; padding: 6px 8px; top: calc(8px + env(safe-area-inset-top, 0px)); }
 body.touch .tr-scope { width: 130px; top: calc(56px + env(safe-area-inset-top, 0px)); }
 body.touch .tr-scope canvas { width: 114px; height: 114px; }
+
+/* ---------------- luneta (ScopeView) ---------------- */
+#scope2 { position: absolute; inset: 0; pointer-events: none; --r: 40vh; --sx: 0px; --sy: 0px; --tunnel: 0; --reveal: 0; }
+#scope2 canvas { position: absolute; left: 0; top: 0; opacity: var(--reveal); }
+#scope2 .sc-tunnel { position: absolute; inset: 0; opacity: calc(1 - var(--reveal) * 0.999);
+  background: radial-gradient(circle at 50% 50%, transparent calc(var(--r) + (1 - var(--tunnel)) * 75vmax), #000 calc(var(--r) + (1 - var(--tunnel)) * 75vmax + 14vmax)); }
+#scope2 .sc-lens { position: absolute; inset: 0; opacity: var(--reveal);
+  background:
+    radial-gradient(circle calc(var(--r) * 0.55) at calc(38% + var(--sx)) calc(34% + var(--sy)), rgba(255, 255, 255, 0.035), transparent 70%),
+    radial-gradient(circle var(--r) at calc(50% + var(--sx)) calc(50% + var(--sy)), rgba(120, 150, 170, 0.06) 0, rgba(0, 0, 0, 0) 78%, rgba(0, 0, 0, 0.42) 92%, rgba(0, 0, 0, 0.92) 98.6%, #000 100%); }
+#scope2 .sc-mag { position: absolute; left: 50%; top: calc(50% + var(--r) * 0.8); transform: translateX(-50%); opacity: calc(var(--reveal) * 0.45); color: #dcd8c8; font-family: var(--head); font-size: 11px; letter-spacing: 0.14em; text-shadow: 0 1px 2px #000; }
+body.touch.scoped #ammo-box { opacity: 0; }
+#scope2 { z-index: 1; }
+#touch-ui { z-index: 2; }
+#story-hud, #train-hud { z-index: 3; } /* sem captura de toques, exceto o painel da bomba */

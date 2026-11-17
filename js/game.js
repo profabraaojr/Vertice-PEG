@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { StoryMission, missionById, AGENT } from './story.js';
 import { Training } from './training.js';
+import { ScopeView } from './scope.js';
 import { Player } from './player.js';
 import { Bot } from './bot.js';
 import { TEAMS, FFA_COLORS, BOT_NAMES, WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS } from './config.js';
@@ -61,6 +62,9 @@ export class Game {
     this.pendingLoadout = null;
     this.onMatchEnd = null;
     this.spotTimer = 0;
+    this.scopeT = 0; // transição da luneta (0 = visão normal, 1 = imagem ampliada)
+    this.zoomFov = 30;
+    this.scopeView = new ScopeView();
   }
 
   // ---------- ciclo da partida ----------
@@ -484,7 +488,7 @@ export class Game {
   playerFire(p) {
     const w = p.weapon;
     const def = w.def;
-    const spread = w.spread(p.speed, !p.onGround, p.crouchT > 0.5, p.ads > 0.6, p.zoomLevel > 0);
+    const spread = w.spread(p.speed, !p.onGround, p.crouchT > 0.5, p.ads > 0.6, p.zoomLevel > 0 && this.scopeT > 0.85);
     w.fire();
     p.shots++;
     p.spawnProtect = 0;
@@ -789,10 +793,19 @@ export class Game {
     if (p.alive) p.applyCamera(this.camera, dt);
     else this.updateDeathCamera(dt);
     const def = p.weapon.def;
-    let targetFov = settings.fov;
-    if (p.alive && p.zoomLevel > 0 && def.zoom) targetFov = def.zoom[p.zoomLevel - 1];
-    else if (p.alive) targetFov = settings.fov / lerp(1, def.adsZoom || 1, p.ads);
-    this.currentFov = p.zoomLevel > 0 ? targetFov : damp(this.currentFov, targetFov, 16, dt);
+    // luneta: a arma sobe até o olho, a imagem se fecha num túnel e a ampliação cresce suavemente
+    const wantScope = p.alive && p.zoomLevel > 0 && !!def.zoom;
+    this.scopeT = Math.max(0, Math.min(1, this.scopeT + (wantScope ? dt * 5.2 : -dt * 7.5)));
+    if (!def.zoom || !p.alive) this.scopeT = 0;
+    if (wantScope) this.zoomFov = damp(this.zoomFov, def.zoom[p.zoomLevel - 1], this.scopeT < 1 ? 60 : 14, dt);
+    const baseFov = p.alive ? settings.fov / lerp(1, def.adsZoom || 1, p.ads) : settings.fov;
+    let targetFov = baseFov;
+    if (this.scopeT > 0) {
+      const e = this.scopeT * this.scopeT * (3 - 2 * this.scopeT);
+      const z = Math.max(0, Math.min(1, (e - 0.35) / 0.65)); // a ampliação começa quando o túnel se fecha
+      targetFov = lerp(baseFov, this.zoomFov, z);
+    }
+    this.currentFov = this.scopeT > 0 ? targetFov : damp(this.currentFov, targetFov, 16, dt);
     if (Math.abs(this.camera.fov - this.currentFov) > 0.01) {
       this.camera.fov = this.currentFov;
       this.camera.updateProjectionMatrix();
@@ -800,12 +813,13 @@ export class Game {
     }
 
     this.viewmodel.update(dt, {
-      speed: p.speed, sprint: p.sprinting, sprintBlend: p.sprintBlend, ads: p.ads, crouch: p.crouchT > 0.5,
+      speed: p.speed, sprint: p.sprinting, sprintBlend: p.sprintBlend, ads: Math.max(p.ads, Math.min(1, this.scopeT * 1.6)), crouch: p.crouchT > 0.5,
       reload: p.weapon.reloading ? p.weapon.reloadProgress : null,
       mdx: this.input.mouse.dx, mdy: this.input.mouse.dy, onGround: p.onGround,
-      scoped: p.zoomLevel > 0, alive: p.alive, empty: p.weapon.mag === 0 && !p.weapon.def.melee,
+      scoped: this.scopeT > 0.62, alive: p.alive, empty: p.weapon.mag === 0 && !p.weapon.def.melee,
     });
     this.effects.update(dt);
+    this.scopeView.update(this.scopeT, this.currentFov, settings.fov, def, this.input.mouse.dx, this.input.mouse.dy, dt);
 
     // trilha dinâmica: combate recente puxa o rock; calmaria volta ao suspense
     const hot = p.alive && (p.spottedUntil > this.time - 2.5 || this.time - p.lastDamageTime < 5);

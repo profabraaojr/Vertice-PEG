@@ -110,7 +110,7 @@ export const WEAPONS = {
     spread: 0.085, scopedSpread: 0.0004, moveSpread: 0.12, airSpread: 0.25, crouchMult: 0.8, adsMult: 1,
     perShot: 0, maxSpread: 0, spreadRecover: 1,
     recoil: 5.0, recoilH: 0.6, recoilRecover: 7,
-    range: 200, minFalloff: 1, speed: 0.82, zoom: [32, 13],
+    range: 200, minFalloff: 1, speed: 0.82, zoom: [20, 5], reticle: 'mildot',
     sound: { freq: 520, low: 70, decay: 0.32, gain: 1.15, tail: 0.9 },
     model: { type: 'sniper', body: 0x3b4234, accent: 0x1d1f22 },
     bot: { pref: 35 },
