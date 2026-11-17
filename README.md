@@ -23,7 +23,7 @@ Ao tocar em Jogar, o jogo entra em tela cheia. Na primeira abertura no celular, 
 
 Em **Configurações → Controles → Modo de controle** há três opções:
 
-- **Automático** (padrão): usa controles na tela apenas quando o aparelho não tem mouse nem trackpad. Computadores que informam suporte a toque sem ter tela sensível continuam no modo de teclado e mouse;
+- **Automático** (padrão): celulares e tablets (inclusive o iPad) abrem com controles na tela; computadores (Windows, Linux, macOS, ChromeOS) abrem no modo de teclado e mouse, mesmo quando têm tela sensível ao toque. Depois, o próprio uso corrige a escolha: um toque na tela liga os controles de toque, e mover o mouse ou apertar W, A, S ou D volta ao teclado e mouse. Com o mouse capturado na partida, um toque acidental na tela do notebook não troca os controles; ao voltar para o mouse no meio da partida, o jogo pausa para que um clique em Continuar capture o mouse de novo;
 - **Controles de toque**: sempre mostra os controles na tela, sem capturar o mouse;
 - **Modo PC**: sempre usa teclado e mouse, sem controles na tela (útil também em tablets com teclado e mouse).
 

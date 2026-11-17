@@ -1,7 +1,7 @@
 // Ponto de entrada: renderizador, laço principal e transições entre menu e partida.
 import * as THREE from 'three';
 import { settings, QUALITY, saveSettings } from './settings.js';
-import { TouchControls, isTouchDevice, resolveTouchMode } from './touch.js';
+import { TouchControls, isTouchDevice, resolveTouchMode, watchInputKind } from './touch.js';
 import { setupPWA } from './pwa.js';
 import { ControlEditor } from './controleditor.js';
 import { activeLayout, onLayoutChange } from './touchlayout.js';
@@ -83,6 +83,7 @@ class App {
     };
     this.net.onPeersChange = () => this.lobby.syncPeers();
     this.menu = new Menu(this);
+    watchInputKind(this, () => settings.controlMode || 'auto');
     this.lobby = new Lobby(this);
     this.chat = new Chat(this);
     this.touchUI = this.touch ? new TouchControls(this) : null;

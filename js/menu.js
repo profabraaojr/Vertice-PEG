@@ -333,7 +333,7 @@ export class Menu {
     const cm = ['auto', 'touch', 'pc'].includes(settings.controlMode) ? settings.controlMode : 'auto';
     $('set-control').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.v === cm));
     $('set-control-note').textContent = cm === 'auto'
-      ? `Detectado: ${isTouchDevice() ? 'aparelho de toque (controles na tela)' : 'computador (teclado e mouse)'}.`
+      ? `Detectado: ${isTouchDevice() ? 'aparelho de toque (controles na tela)' : 'computador (teclado e mouse)'}. Troca sozinho conforme o uso: tocar na tela ou mover o mouse.`
       : cm === 'touch' ? 'Controles na tela, sem captura do mouse.' : 'Teclado e mouse, sem controles na tela.';
     $('set-ch-color').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.v === settings.crosshairColor));
   }

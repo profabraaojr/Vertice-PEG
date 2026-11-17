@@ -10,18 +10,61 @@ import { COMMANDS, activeLayout, computeRects } from './touchlayout.js';
 // Detecção automática: só considera aparelho de toque quando o ponteiro principal é o dedo e não há
 // mouse ou trackpad. Notebooks e PCs com Windows costumam informar suporte a toque (maxTouchPoints)
 // mesmo sem tela sensível; por isso esse indicador sozinho não basta.
-export function isTouchDevice() {
+// Detecção em duas etapas:
+// 1) na abertura, combina as consultas de mídia com o sistema informado pelo navegador. Um
+//    computador (Windows, Linux, macOS, ChromeOS) só começa no toque se não tiver mouse nem
+//    touchpad; celulares e tablets (inclusive o iPad, que se apresenta como Mac) começam no toque;
+// 2) no modo Automático, o uso real corrige a escolha (watchInputKind): um toque na tela liga os
+//    controles de toque; mouse em movimento ou as teclas WASD voltam ao Modo PC.
+let liveKind = null; // null = sem uso observado; true = toque; false = teclado e mouse
+
+export function detectTouchDevice() {
   try {
     const mq = (q) => window.matchMedia(q).matches;
     const coarse = mq('(pointer: coarse)');
     const fine = mq('(any-pointer: fine)');
     const hover = mq('(any-hover: hover)');
-    if (coarse && !fine) return true;
-    if (!coarse && (fine || hover)) return false;
-    return navigator.maxTouchPoints > 1 && !fine;
+    const ua = navigator.userAgent || '';
+    const mtp = navigator.maxTouchPoints || 0;
+    const ipad = /Macintosh/.test(ua) && mtp > 1;
+    const mobileUA = ipad || /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(ua);
+    const desktopUA = !mobileUA && /Windows NT|X11|Macintosh|CrOS|Linux x86_64/.test(ua);
+    if (fine || hover) return mobileUA && !fine; // tem mouse ou touchpad: computador
+    if (desktopUA) return false; // computador com tela de toque: começa no PC e troca no primeiro toque
+    if (coarse) return true;
+    return mtp > 1 || mobileUA;
   } catch (e) {
     return 'ontouchstart' in window && !window.matchMedia;
   }
+}
+
+export function isTouchDevice() {
+  return liveKind != null ? liveKind : detectTouchDevice();
+}
+
+// Observa o dispositivo em uso e troca os controles no modo Automático, sem recarregar.
+export function watchInputKind(app, getMode) {
+  let travel = 0;
+  const swap = (touch) => {
+    if (getMode() !== 'auto' || app.touch === touch) return;
+    liveKind = touch;
+    const playing = app.state === 'playing';
+    app.applyControlMode();
+    if (!touch && playing) app.pause('Mouse detectado: clique em Continuar para jogar com teclado e mouse.');
+    app.toast(touch ? 'Toque detectado: controles na tela ativados.' : 'Mouse ou teclado detectado: Modo PC ativado.');
+  };
+  window.addEventListener('pointerdown', (e) => {
+    // com o mouse capturado, um toque acidental na tela do notebook não troca os controles
+    if (e.pointerType === 'touch' && !app.input.locked) swap(true);
+  }, true);
+  window.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse' || !app.touch) { travel = 0; return; }
+    travel += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
+    if (travel > 60) { travel = 0; swap(false); }
+  }, true);
+  window.addEventListener('keydown', (e) => {
+    if (app.touch && ['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code) && !/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) swap(false);
+  }, true);
 }
 
 // Escolha do jogador em Configurações → Controles: 'auto', 'touch' ou 'pc'.
