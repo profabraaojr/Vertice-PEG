@@ -111,6 +111,16 @@ Detalhes de cada missão:
 
 Falhas comuns: o agente ser abatido.
 
+## Luneta, vento e birutas
+
+**Luneta.** Nos rifles de precisão, o botão direito (no celular, o botão LUNETA) alterna dois níveis de ampliação (no Longinus, cerca de 4× e 16×). A arma sobe até o olho, a imagem se fecha num túnel e a ampliação cresce suavemente; a precisão total vale quando a imagem estabiliza. O retículo é mil-dot de segundo plano focal, como nas lunetas táticas usadas no M82: fica fixo no centro, tem o mesmo tamanho nos dois níveis e, na ampliação máxima, cada ponto vale 1 mil (1 metro a 1.000 m, 10 cm a 100 m). Use os pontos para compensar o vento e a queda.
+
+**Vento.** Toda partida tem vento, com direção e intensidade que mudam aos poucos: cada condição dura de 25 a 45 segundos e há pequenas rajadas naturais. O vento desvia os projéteis conforme o "atraso" do projétil no ar (lag = c · D² / v0), então o efeito cresce com o quadrado da distância: quase nada nos tiros curtos dos mapas e bastante no estande. A mira não corrige o vento automaticamente. No multijogador, o anfitrião envia o vento para todos.
+
+**Birutas.** Há birutas em todos os mapas (sobre telhados, rochedos e ao longo da raia do estande). Elas mostram exatamente o vento usado pela física: apontam para onde o vento sopra, ficam murchas e penduradas sem vento, caídas no meio com vento moderado e esticadas na horizontal com vento forte, e tremulam mais quanto mais forte ele é. Não mostram números.
+
+**Indicador na tela** (opcional, em Configurações → Interface): seta da direção relativa ao seu olhar e três barras (fraco, moderado, forte), sem números.
+
 ## Centro de treinamento
 
 No menu principal, **Centro de treinamento** leva a um complexo com duas áreas (dá para ir de uma à outra a pé):
@@ -121,6 +131,7 @@ No menu principal, **Centro de treinamento** leva a um complexo com duas áreas 
 - Painel de observação: mostra a face do alvo com os últimos impactos e diz a distância do centro (por exemplo, "6 cm abaixo, 4 cm à direita").
 - **Balística básica:** o tiro segue reto até o alvo.
 - **Balística realista:** o projétil cai com a gravidade (arma zerada a 100 m) e é desviado por um vento lateral sorteado; é preciso mirar acima e contra o vento nas distâncias longas.
+- **Vento** (cenários de treino): sem vento, fraco, moderado ou forte lateral, frontal, traseiro ou variável. A 200 m, o vento forte lateral desloca o impacto cerca de 36 cm (≈1,8 mil); a 25 m, menos de 1 cm.
 - **Livre** ou **Desafio de 10 tiros**: dois alvos por distância, da mais curta à mais longa, um disparo cada; os pontos do anel valem mais quanto maior a distância (25 m vale 1×, 200 m vale 8×).
 
 **Dojô · cortes em bambu**
@@ -248,6 +259,8 @@ js/controleditor.js editor "Personalizar controles"
 js/story.js         modo história: campanha, motor de missões, rendição, prisão, reféns e relatório
 js/hands.js         mãos enluvadas articuladas da visão em primeira pessoa
 js/training.js      centro de treinamento: estande de longa distância e dojô de bambus
+js/scope.js         luneta: ocular, retículo mil-dot e transição
+js/wind.js          vento dinâmico, desvio balístico, birutas e indicador
 js/pwa.js           instalação como aplicativo e registro do service worker
 js/lobby.js         sala de espera: times, pronto, configurações do anfitrião e chat
 js/chat.js          chat durante a partida

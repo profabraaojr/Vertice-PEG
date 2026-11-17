@@ -27,6 +27,7 @@ const DEFAULTS = {
   crosshairDot: false,
   crosshairDynamic: true,
   radar: true,
+  windHud: true,
   loadout: { primary: 'tempest', secondary: 'vp9', melee: 'katana' },
   match: { map: 'ferrugem', mode: 'team', bots: 7, difficulty: 'soldado', timeLimit: 8, scoreLimit: 25, rounds: 5, botsShoot: true },
   nickname: '',

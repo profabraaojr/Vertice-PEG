@@ -8,14 +8,13 @@ import * as THREE from 'three';
 import { settings, saveSettings } from './settings.js';
 import { RANGE, cellToWorld } from './map.js';
 import { pick, rand, shuffle } from './utils.js';
+import { ballisticsOf, WIND_SCENARIOS } from './wind.js';
 
 const G = 9.81;
 const SOUND = 343; // m/s: o "tim" do aço chega depois do disparo nas distâncias longas
 const _p = new THREE.Vector3();
 const _n = new THREE.Vector3(0, 0, 1);
 
-// velocidade de saída aproximada por tipo de arma (m/s), usada no modo realista
-const MUZZLE = { sniper: 880, ar: 715, ar2: 900, smg: 400, pistol: 370, revolver: 430, shotgun: 400, gauntlet: 3000 };
 
 export function trainingBest() {
   if (!settings.training || typeof settings.training !== 'object') settings.training = {};
@@ -72,8 +71,6 @@ export class Training {
     this.buildHud();
     this.buildPlates();
     this.buildStalks();
-    this.wind = this.real ? Math.round(rand(1.5, 6) * 10) / 10 * (Math.random() < 0.5 ? -1 : 1) : 0;
-    this.orientWindsock();
     if (this.area === 'range' && this.challenge) {
       // desafio: 10 alvos em ordem de distância, um disparo para cada
       this.queue = [];
@@ -194,18 +191,6 @@ export class Training {
     } else s.cap = null;
   }
 
-  orientWindsock() {
-    const sock = this.game.map.root.getObjectByName('windsock');
-    if (!sock) return;
-    const w = this.wind;
-    sock.visible = true;
-    // aponta para onde o vento sopra; murcha quando não há vento
-    const k = Math.min(1, Math.abs(w) / 6);
-    sock.rotation.set(0, 0, w >= 0 ? -Math.PI / 2 : Math.PI / 2);
-    sock.position.x = RANGE.laneX1 - 1 + (w >= 0 ? 0.9 : -0.9) * Math.max(0.25, k);
-    sock.rotation.x = (1 - k) * 0.9;
-  }
-
   dispose() {
     document.body.classList.remove('training');
     for (const o of this.objects) o.removeFromParent();
@@ -254,10 +239,8 @@ export class Training {
       const acc = st.shots ? Math.round((st.hits / st.shots) * 100) : 0;
       L.push(`Disparos ${st.shots} · acertos ${st.hits} (${acc}%) · pontos ${st.points}`);
       for (const d of RANGE.distances) { const b = st.byDist[d]; if (b) L.push(`${d} m: ${b.h}/${b.s} · melhor ${b.best}`); }
-      if (this.real) {
-        const w = this.wind;
-        L.push(`Vento lateral: ${Math.abs(w).toFixed(1)} m/s ${w > 0 ? '→ (para a direita)' : w < 0 ? '← (para a esquerda)' : ''} · arma zerada a 100 m`);
-      }
+      const sc = WIND_SCENARIOS[this.cfg.wind] || WIND_SCENARIOS.none;
+      L.push(`Vento: ${sc.label.toLowerCase()} · leia a biruta${this.real ? ' · arma zerada a 100 m' : ''}`);
       if (this.queue && !this.ended) {
         const t = this.queue[this.qi];
         if (t) L.push(`Desafio: alvo ${this.qi + 1}/10 · ${t.d} m (marcado em laranja)`);
@@ -306,17 +289,26 @@ export class Training {
   // Chamado pelo jogo para cada projétil do jogador; devolve o ponto de impacto se acertou um alvo.
   shoot(shooter, o, d, def, wallT) {
     if (!shooter.isPlayer || this.ended) return null;
-    const v = MUZZLE[def.model.type] || 800;
+    // balística: o vento desvia conforme o "atraso" do projétil (lag = c·D²/v0, igual à partida)
+    // e, no modo realista, a gravidade o faz cair (arma zerada a 100 m)
+    const bal = ballisticsOf(def);
+    const w = this.game.wind.vector();
+    const hl = Math.hypot(d.x, d.z) || 1;
+    const ux = d.x / hl, uz = d.z / hl;
+    const along = w.x * ux + w.z * uz;
+    const px = w.x - along * ux;
     let best = null;
     for (const p of this.plates) {
       if (d.z >= -1e-4) continue;
       const t = (p.z - o.z) / d.z;
       if (t <= 0 || t > wallT + 0.01) continue;
       let ix = o.x + d.x * t, iy = o.y + d.y * t;
+      const lag = (bal.c * t * t) / bal.v;
+      ix += px * lag; // deriva lateral
       if (this.real) {
-        const tof = t / v, tz = 100 / v;
-        iy += -0.5 * G * tof * tof + 0.5 * G * tz * tz * (t / 100); // queda relativa à linha de visada zerada a 100 m
-        ix += this.wind * tof * 0.6; // deriva pelo vento (aproximação)
+        // vento de frente alonga o voo (e a queda); vento de cauda encurta
+        const tof = (t / bal.v + lag) * (1 - along * 0.012), tz = 100 / bal.v + (bal.c * 1e4) / bal.v;
+        iy += -0.5 * G * tof * tof + 0.5 * G * tz * tz * (t / 100);
       }
       const dx = ix - p.x, dy = iy - p.cy;
       const r = Math.hypot(dx, dy);

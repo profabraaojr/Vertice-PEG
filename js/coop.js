@@ -170,7 +170,8 @@ export function installCoop(Game) {
       ((c.spotted && c.spotted.A > t) || c.spottedUntil > t) ? 1 : 0, r2(c.vel.x), r2(c.vel.z),
       c.spawnProtect > 0 ? 1 : 0,
     ]);
-    this.net.broadcast({ t: 'snap', tm: r2(t), ph: this.phase, pt: r2(this.phaseT), rd: this.round, ts: this.teamScore, e }, true);
+    const w = this.wind ? [r3(this.wind.base.dir), r2(this.wind.base.speed)] : null;
+    this.net.broadcast({ t: 'snap', tm: r2(t), ph: this.phase, pt: r2(this.phaseT), rd: this.round, ts: this.teamScore, e, w }, true);
     if (this.fxQueue.length) {
       for (const peer of this.net.connectedPeers) {
         const myId = 100 + peer.id;
@@ -226,6 +227,7 @@ export function installCoop(Game) {
     this.effects.clear();
     this.active = true;
     this.paused = false;
+    if (this.setupWind) { this.setupWind(); this.wind.remote = true; this.wind.dynamic = false; }
     this.hud.setupMatch(this);
   };
 
@@ -240,6 +242,7 @@ export function installCoop(Game) {
         this.phaseT = msg.pt;
         this.round = msg.rd;
         this.teamScore = msg.ts;
+        if (msg.w && this.wind) this.wind.setRemote(msg.w[0], msg.w[1]); // vento do anfitrião
         for (const e of msg.e) {
           const c = this.byId(e[0]);
           if (!c) continue;

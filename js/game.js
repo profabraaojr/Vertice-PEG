@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { StoryMission, missionById, AGENT } from './story.js';
 import { Training } from './training.js';
 import { ScopeView } from './scope.js';
+import { Wind, Windsock, WindIndicator, WINDSOCK_SPOTS, windDeflect } from './wind.js';
 import { Player } from './player.js';
 import { Bot } from './bot.js';
 import { TEAMS, FFA_COLORS, BOT_NAMES, WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS } from './config.js';
@@ -65,6 +66,19 @@ export class Game {
     this.scopeT = 0; // transição da luneta (0 = visão normal, 1 = imagem ampliada)
     this.zoomFov = 30;
     this.scopeView = new ScopeView();
+    this.wind = new Wind();
+    this.windHud = new WindIndicator();
+    this.socks = [];
+  }
+
+  // Vento da partida e birutas do mapa (sempre ligadas ao mesmo estado de vento)
+  setupWind() {
+    for (const s of this.socks) s.dispose();
+    this.socks = (WINDSOCK_SPOTS[this.map.id] || []).map(([x, y, z, h]) => new Windsock(this.scene, x, y, z, h));
+    if (this.config.mode === 'range') this.wind.setScenario(this.config.wind || 'none');
+    else this.wind.randomize(0.5, 6.5);
+    this.wind.remote = false;
+    for (let i = 0; i < 40; i++) for (const s of this.socks) s.update(0.1, this.wind); // já começa assentada
   }
 
   // ---------- ciclo da partida ----------
@@ -111,6 +125,7 @@ export class Game {
       this.announce(dojo ? 'DOJÔ' : 'ESTANDE DE TIRO', dojo ? (this.training.challenge ? 'Desafio: 60 segundos' : 'Golpe leve: diagonal · pesado: horizontal') : (this.training.challenge ? 'Desafio: 10 alvos, um tiro cada' : 'Alvos de 25 a 200 m'), 3, null, 'roundStart');
       this.active = true;
       this.paused = false;
+      this.setupWind();
       this.hud.setupMatch(this);
       return;
     }
@@ -128,6 +143,7 @@ export class Game {
       this.announce(`MISSÃO ${this.story.def.n}`, this.story.def.title, 3.2, null, 'roundStart');
       this.active = true;
       this.paused = false;
+      this.setupWind();
       this.hud.setupMatch(this);
       return;
     }
@@ -176,10 +192,13 @@ export class Game {
     }
     this.active = true;
     this.paused = false;
+    this.setupWind();
     this.hud.setupMatch(this);
   }
 
   cleanup() {
+    for (const s of this.socks) s.dispose();
+    this.socks = [];
     if (this.story) { this.story.dispose(); this.story = null; }
     if (this.training) { this.training.dispose(); this.training = null; }
     for (const c of this.combatants) if (!c.isPlayer && c.model) this.scene.remove(c.model.root);
@@ -402,6 +421,18 @@ export class Game {
   // Resolve um projétil (hitscan). Retorna o ponto final em _end.
   resolveShot(shooter, o, d, def) {
     const maxD = 250;
+    // vento: desvia a trajetória conforme a distância até o alvo provável (parede ou corpo)
+    if (!this.training && this.wind.speed > 0.05) {
+      const pre = this.world.raycast(o.x, o.y, o.z, d.x, d.y, d.z, maxD);
+      let D = pre ? pre.t : maxD;
+      for (const c of this.combatants) {
+        if (c === shooter || !c.alive) continue;
+        _tmp.set(c.pos.x - o.x, c.pos.y + 1 - o.y, c.pos.z - o.z);
+        const proj = _tmp.dot(d);
+        if (proj > 0 && proj < D && _tmp.lengthSq() - proj * proj < 1.5) D = proj;
+      }
+      windDeflect(d, def, D, this.wind);
+    }
     const hit = this.world.raycast(o.x, o.y, o.z, d.x, d.y, d.z, maxD);
     let best = hit ? hit.t : maxD;
     const wallBox = hit ? hit.box : null;
@@ -819,6 +850,9 @@ export class Game {
       scoped: this.scopeT > 0.62, alive: p.alive, empty: p.weapon.mag === 0 && !p.weapon.def.melee,
     });
     this.effects.update(dt);
+    this.wind.update(dt);
+    for (const s of this.socks) s.update(dt, this.wind);
+    this.windHud.update(this.wind, p.yaw, settings.windHud !== false && p.alive && !this.scopeT, dt);
     this.scopeView.update(this.scopeT, this.currentFov, settings.fov, def, this.input.mouse.dx, this.input.mouse.dy, dt);
 
     // trilha dinâmica: combate recente puxa o rock; calmaria volta ao suspense

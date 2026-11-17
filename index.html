@@ -130,6 +130,8 @@
             <p>Alvos de aço a 25, 50, 100, 150 e 200 metros, com anéis de 1 a 10 pontos. O painel de observação mostra onde cada tiro acertou. O som do aço chega com atraso nas distâncias longas.</p>
             <label class="opt"><span>Balística</span><div class="seg" id="tr-ball"><button data-v="basic">Básica (tiro reto)</button><button data-v="real">Realista (queda e vento)</button></div></label>
             <p class="muted small">Realista: o projétil cai com a gravidade (arma zerada a 100 m) e o vento lateral o desvia; mire acima e contra o vento nas distâncias longas.</p>
+            <label class="opt"><span>Vento</span><div class="seg seg-wrap" id="tr-wind"><button data-v="none">Sem vento</button><button data-v="weak">Fraco lateral</button><button data-v="moderate">Moderado lateral</button><button data-v="strong">Forte lateral</button><button data-v="head">Frontal</button><button data-v="tail">Traseiro</button><button data-v="variable">Variável</button></div></label>
+            <p class="muted small">O vento desvia o projétil conforme a distância: quase nada a 25 m, bastante a 200 m. As birutas ao longo da raia mostram a direção e a intensidade; compense com os pontos do retículo da luneta.</p>
             <label class="opt"><span>Modo</span><div class="seg" id="tr-rvar"><button data-v="free">Livre</button><button data-v="challenge">Desafio: 10 tiros</button></div></label>
             <p class="muted small" id="tr-range-best"></p>
             <button class="btn primary" data-action="train-range">Ir para o estande</button>
@@ -398,6 +400,7 @@
           <label class="opt check"><input type="checkbox" id="set-ch-dot"><span>Ponto central na mira</span></label>
           <label class="opt check"><input type="checkbox" id="set-ch-dyn"><span>Mira dinâmica (abre com a dispersão)</span></label>
           <label class="opt check"><input type="checkbox" id="set-radar"><span>Exibir radar</span></label>
+          <label class="opt check"><input type="checkbox" id="set-wind-hud"><span>Indicador de vento na tela (direção e intensidade, sem números)</span></label>
         </div>
         <footer class="panel-foot">
           <button class="btn" data-action="reset-settings">Restaurar padrões</button>

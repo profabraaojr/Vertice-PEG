@@ -640,3 +640,20 @@ body.touch.scoped #ammo-box { opacity: 0; }
 #scope2 { z-index: 1; }
 #touch-ui { z-index: 2; }
 #story-hud, #train-hud { z-index: 3; } /* sem captura de toques, exceto o painel da bomba */
+
+/* ---------------- indicador de vento ---------------- */
+.seg.seg-wrap { flex-wrap: wrap; }
+.seg.seg-wrap button { flex: 1 1 30%; border-bottom: 1px solid var(--line); }
+#wind-hud { position: absolute; left: calc(22px + env(safe-area-inset-left, 0px)); bottom: 100px; display: flex; align-items: center; gap: 8px; padding: 5px 9px 5px 5px; background: rgba(8, 10, 13, 0.45); border-radius: 22px; font-family: var(--head); pointer-events: none; }
+.wh-dial { position: relative; width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); }
+.wh-dial::before { content: ''; position: absolute; left: 50%; top: 2px; width: 2px; height: 4px; margin-left: -1px; background: rgba(255, 255, 255, 0.5); }
+.wh-dial i { position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 16px solid #ffb057; transform-origin: 50% 50%; }
+.wh-info { display: flex; flex-direction: column; gap: 3px; }
+.wh-info b { font-size: 10px; letter-spacing: 0.14em; color: #e6e1d4; font-weight: 600; }
+.wh-info span { display: flex; gap: 3px; }
+.wh-info em { width: 14px; height: 4px; background: rgba(255, 255, 255, 0.18); }
+.wh-info em.on { background: #ffb057; }
+#wind-hud[data-level="3"] .wh-info em.on, #wind-hud[data-level="3"] .wh-dial i { background: #ff6b5b; border-bottom-color: #ff6b5b; }
+#wind-hud[data-level="3"] .wh-dial i { background: none; }
+body.touch #wind-hud { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: auto; top: calc(62px + env(safe-area-inset-top, 0px)); transform: scale(0.85); transform-origin: top right; }
+body.story #wind-hud { bottom: 100px; }

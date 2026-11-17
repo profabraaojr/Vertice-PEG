@@ -304,7 +304,7 @@ export class Menu {
         saveSettings();
       });
     }
-    this.checks = [['set-fps', 'showFps'], ['set-music-game', 'musicInGame'], ['set-invert', 'invertY'], ['set-ch-dot', 'crosshairDot'], ['set-ch-dyn', 'crosshairDynamic'], ['set-radar', 'radar']];
+    this.checks = [['set-fps', 'showFps'], ['set-music-game', 'musicInGame'], ['set-invert', 'invertY'], ['set-ch-dot', 'crosshairDot'], ['set-ch-dyn', 'crosshairDynamic'], ['set-radar', 'radar'], ['set-wind-hud', 'windHud']];
     for (const [id, key] of this.checks) {
       $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; this.app.applySettings(); saveSettings(); });
     }
@@ -559,10 +559,10 @@ export class Menu {
 
   // ---------- centro de treinamento ----------
   openTraining() {
-    if (!this.trainOpt) this.trainOpt = { ballistics: 'basic', rangeVariant: 'free', weapon: 'katana', dojoVariant: 'free' };
+    if (!this.trainOpt) this.trainOpt = { ballistics: 'basic', rangeVariant: 'free', weapon: 'katana', dojoVariant: 'free', wind: 'none' };
     const o = this.trainOpt;
     const best = trainingBest();
-    for (const [id, key] of [['tr-ball', 'ballistics'], ['tr-rvar', 'rangeVariant'], ['tr-weapon', 'weapon'], ['tr-dvar', 'dojoVariant']]) {
+    for (const [id, key] of [['tr-ball', 'ballistics'], ['tr-wind', 'wind'], ['tr-rvar', 'rangeVariant'], ['tr-weapon', 'weapon'], ['tr-dvar', 'dojoVariant']]) {
       $(id).querySelectorAll('button').forEach((b) => {
         b.classList.toggle('active', b.dataset.v === o[key]);
         b.onclick = () => { o[key] = b.dataset.v; this.openTraining(); };
@@ -577,7 +577,7 @@ export class Menu {
     const o = this.trainOpt;
     this.app.startMatch({
       mode: 'range', map: 'estande', area, bots: 0, timeLimit: 0, scoreLimit: 0, rounds: 0, botsShoot: false, difficulty: 'soldado',
-      variant: area === 'range' ? o.rangeVariant : o.dojoVariant, ballistics: o.ballistics, weapon: o.weapon,
+      variant: area === 'range' ? o.rangeVariant : o.dojoVariant, ballistics: o.ballistics, weapon: o.weapon, wind: area === 'range' ? o.wind : 'weak',
     });
   }
 

@@ -497,15 +497,7 @@ function buildRangeLane(root, addCollider, T, std) {
       root.add(m);
     }
   }
-  // biruta (indicador de vento) na metade da raia
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6, 8), std({ color: 0x777777, roughness: 0.6, metalness: 0.5 }));
-  pole.position.set(laneX1 - 1, 3, fireZ - 75);
-  root.add(pole);
-  const sock = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.8, 10, 1, true), std({ color: 0xff6a1a, roughness: 0.8, side: THREE.DoubleSide }));
-  sock.rotation.z = Math.PI / 2;
-  sock.position.set(laneX1 - 1 - 0.9, 5.6, fireZ - 75);
-  sock.name = 'windsock';
-  root.add(sock);
+  // as birutas da raia são criadas pela partida (js/wind.js), ligadas ao vento da física
   // morros ao longe
   const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), std({ color: 0x8c9a6a, roughness: 1, flatShading: true }));
   for (const [x, z, sx, sy] of [[-90, -300, 90, 28], [70, -330, 120, 36], [0, -380, 160, 46], [-160, -150, 70, 22], [160, -200, 80, 26]]) {
