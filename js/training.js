@@ -8,11 +8,16 @@ import * as THREE from 'three';
 import { settings, saveSettings } from './settings.js';
 import { RANGE, cellToWorld } from './map.js';
 import { pick, rand, shuffle } from './utils.js';
+import * as TX from './textures.js';
 import { ballisticsOf, WIND_SCENARIOS } from './wind.js';
 
 const G = 9.81;
 const SOUND = 343; // m/s: o "tim" do aço chega depois do disparo nas distâncias longas
 const _p = new THREE.Vector3();
+const EXTREME = [500, 1000, 1500, 2000];
+// birutas maiores ao longo da pista extrema (x, z), legíveis pela luneta
+export const EXTREME_SOCKS = [[-34, -417], [36, -777], [-40, -1267], [44, -1777]];
+const ZEROS = [100, 200, 300, 500, 800, 1000, 1200, 1500, 2000];
 const _n = new THREE.Vector3(0, 0, 1);
 
 
@@ -53,6 +58,12 @@ export class Training {
     this.area = cfg.area === 'dojo' ? 'dojo' : 'range';
     this.challenge = cfg.variant === 'challenge';
     this.real = cfg.ballistics === 'real';
+    // pista extrema: alvos de 500 a 2.000 m além da barreira, impacto com atraso (tempo de voo)
+    this.extreme = this.area === 'range' && cfg.lane === 'extreme';
+    this.distances = this.extreme ? EXTREME : RANGE.distances;
+    this.zeroSel = null; // zeragem escolhida no painel (null = a da arma)
+    this.puffs = [];
+    this.hidden = [];
     this.objects = [];
     this.timers = [];
     this.plates = [];
@@ -69,12 +80,17 @@ export class Training {
   setup() {
     document.body.classList.add('training');
     this.buildHud();
+    if (this.extreme) this.buildExtreme();
     this.buildPlates();
     this.buildStalks();
+    if (this.real && this.area === 'range') {
+      this.onKey = (e) => { if (e.code === 'KeyZ' && this.game.active && !e.repeat) this.cycleZero(); };
+      window.addEventListener('keydown', this.onKey);
+    }
     if (this.area === 'range' && this.challenge) {
-      // desafio: 10 alvos em ordem de distância, um disparo para cada
+      // desafio: alvos em ordem de distância, um disparo para cada
       this.queue = [];
-      for (const d of RANGE.distances) for (const p of shuffle(this.plates.filter((q) => q.d === d))) this.queue.push(p);
+      for (const d of this.distances) for (const p of shuffle(this.plates.filter((q) => q.d === d))) this.queue.push(p);
       this.qi = 0;
       this.highlight(this.queue[0]);
     }
@@ -92,11 +108,15 @@ export class Training {
 
   buildPlates() {
     const g = this.game;
-    const layout = { 25: [-9, 9], 50: [-7, 7], 100: [-5.5, 5.5], 150: [-1.6, 1.6], 200: [-4, 4] };
-    const radius = { 25: 0.25, 50: 0.3, 100: 0.42, 150: 0.55, 200: 0.7 };
+    const layout = this.extreme
+      ? { 500: [-12, 12], 1000: [-10, 15], 1500: [-26, 8], 2000: [-6, 18] } // ângulos distintos: nenhum alvo encobre outro
+      : { 25: [-9, 9], 50: [-7, 7], 100: [-5.5, 5.5], 150: [-1.6, 1.6], 200: [-4, 4] };
+    const radius = this.extreme
+      ? { 500: 1.0, 1000: 1.5, 1500: 2.0, 2000: 2.6 }
+      : { 25: 0.25, 50: 0.3, 100: 0.42, 150: 0.55, 200: 0.7 };
     const post = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.8 });
     const steel = new THREE.MeshStandardMaterial({ color: 0x3a3d40, roughness: 0.5, metalness: 0.7 });
-    for (const d of RANGE.distances) {
+    for (const d of this.distances) {
       for (const x of layout[d]) {
         const R = radius[d];
         const z = RANGE.fireZ - d;
@@ -104,7 +124,7 @@ export class Training {
         grp.position.set(x, 0, z);
         const hingeY = 1.55 + R;
         for (const sx of [-1, 1]) {
-          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, hingeY + 0.1, 0.08), post);
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08 * (1 + R), hingeY + 0.1, 0.08 * (1 + R)), post);
           leg.position.set(sx * (R + 0.15), (hingeY + 0.1) / 2, 0);
           leg.castShadow = true;
           grp.add(leg);
@@ -132,6 +152,77 @@ export class Training {
         this.plates.push({ d, x, z, R, cy: hingeY - 0.2 - R, pivot, glow, swing: 0, vel: 0, hits: [] });
       }
     }
+  }
+
+  // terreno aberto até 2,7 km, sem a barreira do fundo; neblina e plano de corte da câmera ampliados
+  buildExtreme() {
+    const g = this.game;
+    g.scene.traverse((o) => { if (o.userData.rangeBack && o.visible) { o.visible = false; this.hidden.push(o); } });
+    const add = (m) => { g.scene.add(m); this.objects.push(m); return m; };
+    const L = 2500, z0 = -240;
+    const tex = TX.groundSand(13);
+    tex.repeat.set(1600 / 8, L / 8);
+    const ground = add(new THREE.Mesh(new THREE.PlaneGeometry(1600, L), new THREE.MeshStandardMaterial({ map: tex, color: 0xb4a682, roughness: 1 })));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(0, 0, z0 - L / 2);
+    // faixas de distância e postes laranja ao lado de cada linha de alvos
+    const lineMat = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 });
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0xff7a2a, roughness: 0.6 });
+    for (const d of EXTREME) {
+      const z = RANGE.fireZ - d;
+      const l = add(new THREE.Mesh(new THREE.PlaneGeometry(60, 0.6), lineMat));
+      l.rotation.x = -Math.PI / 2;
+      l.position.set(0, 0.03, z);
+      for (const x of [-30, 30]) {
+        const pole = add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 6, 0.5), poleMat));
+        pole.position.set(x, 3, z);
+      }
+    }
+    // morros no horizonte e moitas espalhadas (referência de profundidade)
+    const hillMat = new THREE.MeshStandardMaterial({ color: 0x8c9a6a, roughness: 1, flatShading: true });
+    const hillGeo = new THREE.SphereGeometry(1, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    for (const [x, z, sx, sy] of [[-500, -2650, 420, 120], [300, -2750, 520, 160], [0, -2900, 700, 210], [-900, -1800, 300, 90], [950, -1500, 320, 100], [-700, -900, 200, 60], [760, -700, 220, 70]]) {
+      const h = add(new THREE.Mesh(hillGeo, hillMat));
+      h.scale.set(sx, sy, sx * 0.6);
+      h.position.set(x, -2, z);
+    }
+    const bushGeo = new THREE.IcosahedronGeometry(1, 0);
+    const bushMat = new THREE.MeshStandardMaterial({ color: 0x5e7040, roughness: 1, flatShading: true });
+    const n = 260;
+    const bush = add(new THREE.InstancedMesh(bushGeo, bushMat, n));
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < n; i++) {
+      const z = -260 - rnd() * 2300;
+      let x = (rnd() - 0.5) * 500;
+      if (Math.abs(x) < 26) x += Math.sign(x || 1) * 26; // a linha de tiro fica livre
+      const s = 0.8 + rnd() * 1.6 + (-z / 2300) * 1.5;
+      v.set(x, s * 0.35, z);
+      q.setFromAxisAngle(sc.set(0, 1, 0), rnd() * 6);
+      m4.compose(v, q, sc.set(s * 1.3, s * 0.7, s));
+      bush.setMatrixAt(i, m4);
+    }
+    bush.instanceMatrix.needsUpdate = true;
+    // as birutas maiores ao longo da pista (EXTREME_SOCKS) são criadas pela partida, com as demais
+    // neblina mais distante e plano de corte da câmera estendido
+    this.saved = { fog: g.scene.fog ? [g.scene.fog.near, g.scene.fog.far] : null, far: g.camera.far };
+    if (g.scene.fog) { g.scene.fog.near = 900; g.scene.fog.far = 6500; }
+    g.camera.far = 4000;
+    g.camera.updateProjectionMatrix();
+  }
+
+  zeroOf(def) { return this.zeroSel || def.zero || 100; }
+
+  cycleZero() {
+    const def = this.game.player.weapon && this.game.player.weapon.def;
+    if (!def || this.zoneOf() !== 'range') return;
+    const cur = this.zeroOf(def);
+    const next = ZEROS.find((z) => z > cur) || ZEROS[0];
+    this.zeroSel = next;
+    this.game.audio.beep(1400, 0.04, 0.12);
+    this.pop(`Luneta zerada a ${next.toLocaleString('pt-BR')} m`, '#cfe3ff');
+    this.render();
   }
 
   buildStalks() {
@@ -193,6 +284,18 @@ export class Training {
 
   dispose() {
     document.body.classList.remove('training');
+    if (this.onKey) window.removeEventListener('keydown', this.onKey);
+    for (const o of this.hidden) o.visible = true;
+    this.hidden = [];
+    for (const f of this.puffs) f.mesh.removeFromParent();
+    this.puffs = [];
+    if (this.saved) {
+      const g = this.game;
+      if (g.scene.fog && this.saved.fog) { g.scene.fog.near = this.saved.fog[0]; g.scene.fog.far = this.saved.fog[1]; }
+      g.camera.far = this.saved.far;
+      g.camera.updateProjectionMatrix();
+      this.saved = null;
+    }
     for (const o of this.objects) o.removeFromParent();
     for (const s of this.stalks) { if (s.mesh) s.mesh.removeFromParent(); if (s.cap) s.cap.removeFromParent(); }
     for (const p of this.pieces) p.mesh.removeFromParent();
@@ -238,12 +341,15 @@ export class Training {
       const st = this.stats;
       const acc = st.shots ? Math.round((st.hits / st.shots) * 100) : 0;
       L.push(`Disparos ${st.shots} · acertos ${st.hits} (${acc}%) · pontos ${st.points}`);
-      for (const d of RANGE.distances) { const b = st.byDist[d]; if (b) L.push(`${d} m: ${b.h}/${b.s} · melhor ${b.best}`); }
+      for (const d of this.distances) { const b = st.byDist[d]; if (b) L.push(`${d.toLocaleString('pt-BR')} m: ${b.h}/${b.s} · melhor ${b.best}`); }
       const sc = WIND_SCENARIOS[this.cfg.wind] || WIND_SCENARIOS.none;
-      L.push(`Vento: ${sc.label.toLowerCase()} · leia a biruta${this.real ? ' · arma zerada a 100 m' : ''}`);
+      L.push(`Vento: ${sc.label.toLowerCase()} · leia a biruta`);
+      const def = this.game.player && this.game.player.weapon && this.game.player.weapon.def;
+      if (this.real && def) L.push(`Luneta zerada a ${this.zeroOf(def).toLocaleString('pt-BR')} m · <button class="tr-zero" type="button">mudar (Z)</button>`);
+      if (this.spot) L.push(this.spot);
       if (this.queue && !this.ended) {
         const t = this.queue[this.qi];
-        if (t) L.push(`Desafio: alvo ${this.qi + 1}/10 · ${t.d} m (marcado em laranja)`);
+        if (t) L.push(`Desafio: alvo ${this.qi + 1}/${this.queue.length} · ${t.d.toLocaleString('pt-BR')} m (marcado em laranja)`);
       } else if (!this.queue) L.push('Livre: atire à vontade. B troca de arma.');
     } else {
       const c = this.cuts;
@@ -256,6 +362,8 @@ export class Training {
       } else L.push('Golpe leve: diagonal · golpe pesado (botão direito): horizontal · mire na altura do corte');
     }
     this.hud.lines.innerHTML = L.map((x) => `<div>${x}</div>`).join('');
+    const zb = this.hud.lines.querySelector('.tr-zero');
+    if (zb) zb.onclick = (e) => { e.preventDefault(); this.cycleZero(); };
   }
 
   drawScope(plate, last) {
@@ -290,29 +398,33 @@ export class Training {
   shoot(shooter, o, d, def, wallT) {
     if (!shooter.isPlayer || this.ended) return null;
     // balística: o vento desvia conforme o "atraso" do projétil (lag = c·D²/v0, igual à partida)
-    // e, no modo realista, a gravidade o faz cair (arma zerada a 100 m)
+    // e, no modo realista, a gravidade o faz cair (arma zerada na distância da arma ou do painel)
     const bal = ballisticsOf(def);
     const w = this.game.wind.vector();
     const hl = Math.hypot(d.x, d.z) || 1;
     const ux = d.x / hl, uz = d.z / hl;
     const along = w.x * ux + w.z * uz;
     const px = w.x - along * ux;
+    // pista extrema: a barreira do fundo está escondida, então só os muros laterais param o tiro
+    if (this.extreme && o.z + d.z * wallT < RANGE.endZ + 3) wallT = Infinity;
+    const Z = this.zeroOf(def);
+    const tz = Z / bal.v + (bal.c * Z * Z) / bal.v;
+    const impactAt = (t) => {
+      const lag = (bal.c * t * t) / bal.v;
+      let ix = o.x + d.x * t + px * lag, iy = o.y + d.y * t;
+      const tof = (t / bal.v + lag) * (1 - along * 0.012); // vento de frente alonga o voo; de cauda encurta
+      if (this.real) iy += -0.5 * G * tof * tof + 0.5 * G * tz * tz * (t / Z);
+      return { ix, iy, tof };
+    };
     let best = null;
     for (const p of this.plates) {
       if (d.z >= -1e-4) continue;
       const t = (p.z - o.z) / d.z;
       if (t <= 0 || t > wallT + 0.01) continue;
-      let ix = o.x + d.x * t, iy = o.y + d.y * t;
-      const lag = (bal.c * t * t) / bal.v;
-      ix += px * lag; // deriva lateral
-      if (this.real) {
-        // vento de frente alonga o voo (e a queda); vento de cauda encurta
-        const tof = (t / bal.v + lag) * (1 - along * 0.012), tz = 100 / bal.v + (bal.c * 1e4) / bal.v;
-        iy += -0.5 * G * tof * tof + 0.5 * G * tz * tz * (t / 100);
-      }
+      const { ix, iy, tof } = impactAt(t);
       const dx = ix - p.x, dy = iy - p.cy;
       const r = Math.hypot(dx, dy);
-      if (r <= p.R && (!best || t < best.t)) best = { p, t, dx, dy, r, ix, iy };
+      if (r <= p.R && (!best || t < best.t)) best = { p, t, dx, dy, r, ix, iy, tof };
     }
     this.stats.shots++;
     if (!best) {
@@ -320,33 +432,91 @@ export class Training {
       let near = null, nd = Infinity;
       for (const p of this.plates) {
         const t = (p.z - o.z) / d.z;
-        if (t <= 0) continue;
+        if (t <= 0 || t > wallT + 0.01) continue;
         const e = Math.hypot(o.x + d.x * t - p.x, o.y + d.y * t - p.cy) / t;
         if (e < nd) { nd = e; near = p; }
       }
-      if (near && nd < 0.03) this.addDist(near.d, false, 0);
-      if (this.challenge) this.challengeShot(null);
-      this.render();
-      return null;
+      const counted = near && nd < (this.extreme ? 0.006 : 0.03);
+      if (!this.extreme) {
+        if (counted) this.addDist(near.d, false, 0);
+        if (this.challenge) this.challengeShot(null);
+        this.render();
+        return null;
+      }
+      // pista extrema: a poeira levanta onde o projétil cai, depois do tempo de voo
+      if (!near) { this.render(); return null; }
+      const t = (near.z - o.z) / d.z;
+      const im = impactAt(t);
+      const dx = im.ix - near.x, dy = im.iy - near.cy;
+      const pt = new THREE.Vector3(im.ix, Math.max(0.1, Math.min(im.iy, 0.1)), near.z + 0.5);
+      const over = im.iy > near.cy + near.R + 3; // passou alto: cai bem além, fora de vista
+      this.after(im.tof, () => {
+        if (!over) this.puff(pt, im.iy < 0 ? 1 : 0.6);
+        if (counted) this.addDist(near.d, false, 0);
+        this.spotter(near, dx, dy, null);
+        if (this.challenge) this.challengeShot(null);
+        this.render();
+      });
+      _p.set(im.ix, Math.max(0.1, im.iy), near.z);
+      return { point: _p, t, deferred: true };
     }
     const p = best.p;
     const score = Math.max(1, 10 - Math.floor((best.r / p.R) * 10));
     const hit = { dx: best.dx, dy: best.dy, score };
-    p.hits.push(hit);
-    p.vel += 2.5 + score * 0.15;
-    this.stats.hits++;
-    this.stats.points += score;
-    this.addDist(p.d, true, score);
-    this.drawScope(p, hit);
-    // o som do aço chega depois, conforme a distância
     const g = this.game;
-    const ring = () => g.audio.beep(2600 - p.d * 4, 0.18, Math.max(0.05, 0.3 - p.d / 900));
-    if (p.d > 40) this.after(p.d / SOUND, ring); else ring();
-    this.pop(`${p.d} m · ${score}`, score >= 9 ? '#ffd166' : '#6dff9e');
-    if (this.challenge) this.challengeShot(p, score);
-    this.render();
+    const land = () => {
+      p.hits.push(hit);
+      p.vel += 2.5 + score * 0.15;
+      this.stats.hits++;
+      this.stats.points += score;
+      this.addDist(p.d, true, score);
+      this.drawScope(p, hit);
+      // o som do aço chega depois, conforme a distância
+      const ring = () => g.audio.beep(Math.max(900, 2600 - p.d * 4), 0.18, Math.max(0.04, 0.3 - Math.min(p.d, 300) / 900));
+      if (p.d > 40) this.after(p.d / SOUND, ring); else ring();
+      this.pop(`${p.d.toLocaleString('pt-BR')} m · ${score}`, score >= 9 ? '#ffd166' : '#6dff9e');
+      if (this.extreme) this.spotter(p, hit.dx, hit.dy, score);
+      if (this.challenge) this.challengeShot(p, score);
+      this.render();
+    };
     _p.set(best.ix, best.iy, p.z + 0.02);
+    if (this.extreme) {
+      // o projétil leva segundos para chegar: o acerto aparece com atraso
+      const pt = _p.clone();
+      this.after(best.tof, () => { land(); g.effects.impact(pt, new THREE.Vector3(0, 0, 1), 'metal'); this.flash(pt, p.R); });
+      return { point: _p, t: best.t, deferred: true };
+    }
+    land();
     return { point: _p, t: best.t };
+  }
+
+  // chamada do observador: desvio em metros e em miliradianos (o retículo em árvore é em mrad)
+  spotter(p, dx, dy, score) {
+    const m = (v) => `${Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} m`;
+    const mil = (v) => (Math.abs(v) / p.d * 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+    const parts = [];
+    if (Math.abs(dy) > 0.15) parts.push(`${m(dy)} ${dy > 0 ? 'alto' : 'baixo'} (${mil(dy)} mil)`);
+    if (Math.abs(dx) > 0.15) parts.push(`${m(dx)} à ${dx > 0 ? 'direita' : 'esquerda'} (${mil(dx)} mil)`);
+    const where = parts.length ? parts.join(', ') : 'no centro';
+    this.spot = score != null ? `Observador: impacto a ${p.d.toLocaleString('pt-BR')} m, ${score} pontos, ${where}.` : `Observador: errou a ${p.d.toLocaleString('pt-BR')} m, ${where}.`;
+    if (score == null) this.pop(`ERROU · ${parts.length ? parts.map((x) => x.split(' (')[0]).join(', ') : ''}`, '#ffb057');
+  }
+
+  // nuvem de poeira grande o bastante para ser vista pela luneta a 2 km
+  puff(pt, k = 1) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xc9b48e, transparent: true, opacity: 0.85, depthWrite: false });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 6), mat);
+    mesh.position.copy(pt);
+    this.game.scene.add(mesh);
+    this.puffs.push({ mesh, life: 1.6, max: 1.6, size: 2.2 * k, rise: 1.2 });
+  }
+
+  flash(pt, R) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 1, depthWrite: false, fog: false });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), mat);
+    mesh.position.copy(pt);
+    this.game.scene.add(mesh);
+    this.puffs.push({ mesh, life: 0.25, max: 0.25, size: R * 0.5, rise: 0 });
   }
 
   addDist(d, hit, score) {
@@ -461,6 +631,16 @@ export class Training {
       p.swing += p.vel * dt;
       p.pivot.rotation.x = -p.swing * 0.5;
     }
+    // poeira e clarões da pista extrema
+    for (let i = this.puffs.length - 1; i >= 0; i--) {
+      const f = this.puffs[i];
+      f.life -= dt;
+      const k = 1 - f.life / f.max;
+      f.mesh.scale.setScalar(f.size * (0.35 + k * 0.9));
+      f.mesh.position.y += f.rise * dt;
+      f.mesh.material.opacity = Math.max(0, (f.life / f.max) * 0.85);
+      if (f.life <= 0) { f.mesh.removeFromParent(); f.mesh.geometry.dispose(); f.mesh.material.dispose(); this.puffs.splice(i, 1); }
+    }
     // pedaços de bambu caindo
     for (let i = this.pieces.length - 1; i >= 0; i--) {
       const pc = this.pieces[i];
@@ -499,9 +679,11 @@ export class Training {
   }
 
   challengeScore() {
-    // pontos do anel multiplicados pela distância (25 m vale 1×, 200 m vale 8×)
-    return this.queue.reduce((a, p) => a + (p.result || 0) * (p.d / 25), 0);
+    // pontos do anel multiplicados pela distância (25 m vale 1×, 200 m vale 8×; na pista extrema, 500 m vale 2× e 2.000 m vale 8×)
+    return this.queue.reduce((a, p) => a + (p.result || 0) * (p.d / this.unit()), 0);
   }
+
+  unit() { return this.extreme ? 250 : 25; }
 
   results() {
     const g = this.game;
@@ -510,10 +692,10 @@ export class Training {
     let score = 0, title, stars = 0, key;
     if (this.area === 'range') {
       const ladder = this.queue || [];
-      for (const t of ladder) { const pts = (t.result || 0) * (t.d / 25); lines.push([`Alvo a ${t.d} m (${t.x < 0 ? 'esquerda' : 'direita'})`, t.result ? `${t.result} no anel` : 'errou', pts]); score += pts; }
-      title = 'Estande · desafio de 10 tiros';
-      stars = score >= 380 ? 3 : score >= 230 ? 2 : score > 0 ? 1 : 0;
-      key = `range-${this.real ? 'real' : 'basic'}`;
+      for (const t of ladder) { const pts = (t.result || 0) * (t.d / this.unit()); lines.push([`Alvo a ${t.d.toLocaleString('pt-BR')} m (${t.x < 0 ? 'esquerda' : 'direita'})`, t.result ? `${t.result} no anel` : 'errou', pts]); score += pts; }
+      title = this.extreme ? `Pista extrema · desafio de ${ladder.length} tiros` : 'Estande · desafio de 10 tiros';
+      stars = this.extreme ? (score >= 220 ? 3 : score >= 120 ? 2 : score > 0 ? 1 : 0) : (score >= 380 ? 3 : score >= 230 ? 2 : score > 0 ? 1 : 0);
+      key = `range-${this.extreme ? 'extreme-' : ''}${this.real ? 'real' : 'basic'}`;
     } else {
       const k = this.cuts;
       lines.push(['Cortes no bambu marcado, tipo certo', k.good, k.good * 100]);

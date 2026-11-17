@@ -486,6 +486,7 @@ function buildRangeLane(root, addCollider, T, std) {
   const berm = new THREE.Mesh(new THREE.BoxGeometry(laneX1 - laneX0 + 8, 9, 6), std({ map: TX.groundSand(44), color: 0x9a8566, roughness: 1 }));
   berm.position.set(0, 4.5, endZ - 1);
   berm.receiveShadow = true;
+  berm.userData.rangeBack = true; // a pista extrema esconde a barreira e os morros
   root.add(berm);
   addCollider(laneX0 - 4, 0, endZ - 4, laneX1 + 4, 9, endZ + 2, 'concrete');
   // placas de distância nos dois muros
@@ -504,6 +505,7 @@ function buildRangeLane(root, addCollider, T, std) {
     const h = hill.clone();
     h.scale.set(sx, sy, sx * 0.6);
     h.position.set(x, 0, z);
+    h.userData.rangeBack = true;
     root.add(h);
   }
 }

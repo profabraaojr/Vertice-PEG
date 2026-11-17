@@ -138,8 +138,9 @@ export class AudioEngine {
     const t = this.ctx.currentTime;
     const dest = this.out(pos, true);
     const g = vol * p.gain;
-    this.noiseBurst(dest, t, p.decay, 'lowpass', p.freq * 5, g, 0.7, p.freq * 0.5);
-    this.noiseBurst(dest, t, 0.03, 'highpass', 3000, g * 0.5);
+    this.noiseBurst(dest, t, p.decay, 'lowpass', p.freq * (p.suppressed ? 2.5 : 5), g, 0.7, p.freq * 0.5);
+    if (!p.suppressed) this.noiseBurst(dest, t, 0.03, 'highpass', 3000, g * 0.5);
+    else this.noiseBurst(dest, t + 0.004, 0.05, 'bandpass', 1400, g * 0.35, 1.2); // "tchum" abafado do supressor
     this.tone(dest, t, p.decay * 0.9, 'sine', p.low * 2.2, p.low * 0.45, g * 0.9);
     if (p.tail) this.noiseBurst(dest, t + 0.02, p.tail, 'lowpass', 900, g * 0.18, 0.5, 200);
   }

@@ -244,11 +244,15 @@ export class Menu {
       ['Golpes/min', def.rpm],
       ['Mobilidade', `${Math.round(def.speed * 100)}%`],
     ] : [
+      ['Calibre', def.caliber || '—'],
+      ['Mira', def.optic || '—'],
+      ['Distância prevista', def.rangeText || '—'],
       ['Dano', def.pellets > 1 ? `${def.damage} × ${def.pellets}` : def.damage],
       ['Cadência', `${def.rpm} dpm`],
       ['Pente', `${def.mag} / ${def.reserve}`],
       ['Recarga', `${def.reload.toFixed(1)} s`],
-      ['Modo', def.beam ? 'Feixe perfurante' : def.auto ? 'Automático' : def.zoom ? 'Ferrolho' : def.pellets > 1 ? 'Bombeamento' : 'Semiautomático'],
+      ['Ação', def.beam ? 'Feixe perfurante' : def.auto ? 'Automático' : def.action === 'bolt' ? 'Ferrolho' : def.pellets > 1 ? 'Bombeamento' : 'Semiautomático'],
+      ...(def.zoom ? [['Ampliações', def.zoom.map((f) => `${Math.round(80 / f)}×`).join(' · ')]] : []),
       ['Mobilidade', `${Math.round(def.speed * 100)}%`],
     ];
     const sp = box.querySelector('.specs');
@@ -559,16 +563,20 @@ export class Menu {
 
   // ---------- centro de treinamento ----------
   openTraining() {
-    if (!this.trainOpt) this.trainOpt = { ballistics: 'basic', rangeVariant: 'free', weapon: 'katana', dojoVariant: 'free', wind: 'none' };
+    if (!this.trainOpt) this.trainOpt = { ballistics: 'basic', rangeVariant: 'free', weapon: 'katana', dojoVariant: 'free', wind: 'none', lane: 'standard', rifle: 'longinus' };
     const o = this.trainOpt;
     const best = trainingBest();
-    for (const [id, key] of [['tr-ball', 'ballistics'], ['tr-wind', 'wind'], ['tr-rvar', 'rangeVariant'], ['tr-weapon', 'weapon'], ['tr-dvar', 'dojoVariant']]) {
+    for (const [id, key] of [['tr-lane', 'lane'], ['tr-rifle', 'rifle'], ['tr-ball', 'ballistics'], ['tr-wind', 'wind'], ['tr-rvar', 'rangeVariant'], ['tr-weapon', 'weapon'], ['tr-dvar', 'dojoVariant']]) {
       $(id).querySelectorAll('button').forEach((b) => {
         b.classList.toggle('active', b.dataset.v === o[key]);
         b.onclick = () => { o[key] = b.dataset.v; this.openTraining(); };
       });
     }
-    $('tr-range-best').textContent = `Recordes do desafio: básica ${best['range-basic'] || 0} · realista ${best['range-real'] || 0} pontos`;
+    $('tr-range-best').textContent = o.lane === 'extreme'
+      ? `Recordes da pista extrema: básica ${best['range-extreme-basic'] || 0} · realista ${best['range-extreme-real'] || 0} pontos`
+      : `Recordes do desafio: básica ${best['range-basic'] || 0} · realista ${best['range-real'] || 0} pontos`;
+    const rd = WEAPONS[o.rifle];
+    $('tr-rifle-info').textContent = rd ? `${rd.caliber} · ${rd.optic} · distância prevista ${rd.rangeText}` : '';
     $('tr-dojo-best').textContent = `Recordes do desafio: katana ${best['dojo-katana'] || 0} · nodachi ${best['dojo-nodachi'] || 0} pontos`;
     if (this.current !== 'screen-training') this.show('screen-training');
   }
@@ -578,6 +586,7 @@ export class Menu {
     this.app.startMatch({
       mode: 'range', map: 'estande', area, bots: 0, timeLimit: 0, scoreLimit: 0, rounds: 0, botsShoot: false, difficulty: 'soldado',
       variant: area === 'range' ? o.rangeVariant : o.dojoVariant, ballistics: o.ballistics, weapon: o.weapon, wind: area === 'range' ? o.wind : 'weak',
+      lane: o.lane, rifle: o.rifle,
     });
   }
 

@@ -7,6 +7,7 @@
 // origem no topo do punho. No mundo, "para a frente" é o eixo -Z.
 import * as THREE from 'three';
 import { mulberry32 } from './utils.js';
+import { buildRifle, RIFLE_TYPES } from './rifles.js';
 
 // ---------------------------------------------------------------- ambiente e materiais
 let ENV = null;
@@ -266,7 +267,7 @@ export class Kit {
 }
 
 // trilho dentado (padrão de acessórios) visto de lado
-function railPts(u0, u1, y0, y1, pitch = 0.0105) {
+export function railPts(u0, u1, y0, y1, pitch = 0.0105) {
   const base = y1 - 0.0028;
   const pts = [[u0, y0]];
   let u = u0;
@@ -279,7 +280,7 @@ function railPts(u0, u1, y0, y1, pitch = 0.0105) {
 }
 
 // guarda-mato com gatilho
-function triggerGuard(k, u0, u1, yTop, yBot, m, trigM) {
+export function triggerGuard(k, u0, u1, yTop, yBot, m, trigM) {
   const c = 0.008, t = 0.0035;
   k.prof([[u0, yTop], [u1, yTop], [u1, yBot + c], [u1 - c, yBot], [u0 + c, yBot], [u0, yBot + c]], 0.011, m, {
     b: 0.001,
@@ -727,6 +728,7 @@ export function buildGun(def) {
       break;
     }
     default: {
+      if (RIFLE_TYPES.has(md.type)) { buildRifle(md, k, out, sub, { gunmetal, steelDark, polyDark, rubber, bore }); break; }
       k.box(0.05, 0.07, 0.4, 0, 0.03, 0.1, gunmetal);
       out.muzzle.position.set(0, 0.03, -0.32);
     }

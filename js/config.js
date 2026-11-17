@@ -39,7 +39,7 @@ export const DIFFICULTY = {
  */
 export const WEAPONS = {
   vp9: {
-    id: 'vp9', name: 'VP-9', category: 'Pistola', slot: 'secondary',
+    id: 'vp9', name: 'VP-9', caliber: '9 × 19 mm', optic: 'Mira aberta', rangeText: '5 a 30 m', category: 'Pistola', slot: 'secondary',
     damage: 26, headMult: 3.4, legMult: 0.75, rpm: 400, auto: false, pellets: 1,
     mag: 15, reserve: 75, reload: 1.45,
     spread: 0.006, moveSpread: 0.03, airSpread: 0.1, crouchMult: 0.75, adsMult: 0.55,
@@ -52,7 +52,7 @@ export const WEAPONS = {
     desc: 'Semiautomática leve e precisa. Recarga rápida e boa mobilidade.',
   },
   brasa: {
-    id: 'brasa', name: 'Brasa .50', category: 'Pistola', slot: 'secondary',
+    id: 'brasa', name: 'Brasa .50', caliber: '.50 AE', optic: 'Mira aberta', rangeText: '5 a 35 m', category: 'Pistola', slot: 'secondary',
     damage: 55, headMult: 2.7, legMult: 0.75, rpm: 165, auto: false, pellets: 1,
     mag: 7, reserve: 35, reload: 2.1,
     spread: 0.007, moveSpread: 0.055, airSpread: 0.16, crouchMult: 0.75, adsMult: 0.5,
@@ -65,7 +65,7 @@ export const WEAPONS = {
     desc: 'Pistola pesada. Um disparo na cabeça elimina; o coice cobra disciplina.',
   },
   ratel: {
-    id: 'ratel', name: 'Ratel MK2', category: 'Submetralhadora', slot: 'primary',
+    id: 'ratel', name: 'Ratel MK2', caliber: '9 × 19 mm', optic: 'Mira holográfica', rangeText: '5 a 35 m', category: 'Submetralhadora', slot: 'primary',
     damage: 21, headMult: 2.8, legMult: 0.75, rpm: 880, auto: true, pellets: 1,
     mag: 32, reserve: 160, reload: 2.0,
     spread: 0.011, moveSpread: 0.018, airSpread: 0.09, crouchMult: 0.8, adsMult: 0.65,
@@ -78,7 +78,7 @@ export const WEAPONS = {
     desc: 'Cadência altíssima e mobilidade superior. Perde força com a distância.',
   },
   tempest: {
-    id: 'tempest', name: 'Tempest AR-K', category: 'Rifle de assalto', slot: 'primary',
+    id: 'tempest', name: 'Tempest AR-K', caliber: '7,62 × 39 mm', optic: 'Mira aberta de alça e massa', rangeText: '10 a 60 m', category: 'Rifle de assalto', slot: 'primary',
     damage: 34, headMult: 3.8, legMult: 0.75, rpm: 600, auto: true, pellets: 1,
     mag: 30, reserve: 120, reload: 2.45,
     spread: 0.004, moveSpread: 0.065, airSpread: 0.17, crouchMult: 0.7, adsMult: 0.5,
@@ -91,7 +91,7 @@ export const WEAPONS = {
     desc: 'Rifle de alto dano, letal na cabeça. Exige controle do recuo vertical.',
   },
   kestrel: {
-    id: 'kestrel', name: 'Kestrel M7', category: 'Rifle de assalto', slot: 'primary',
+    id: 'kestrel', name: 'Kestrel M7', caliber: '5,56 × 45 mm', optic: 'Mira holográfica', rangeText: '10 a 70 m', category: 'Rifle de assalto', slot: 'primary',
     damage: 29, headMult: 3.8, legMult: 0.75, rpm: 690, auto: true, pellets: 1,
     mag: 30, reserve: 120, reload: 2.2,
     spread: 0.0035, moveSpread: 0.055, airSpread: 0.16, crouchMult: 0.7, adsMult: 0.5,
@@ -104,20 +104,80 @@ export const WEAPONS = {
     desc: 'Rifle estável e controlável. Menos dano por tiro, mais consistência.',
   },
   longinus: {
-    id: 'longinus', name: 'Longinus .338', category: 'Rifle de precisão', slot: 'primary',
+    id: 'longinus', name: 'Longinus .338', caliber: '.338 Lapua Magnum', optic: 'Luneta 4–16× · retículo mil-dot', rangeText: '30 a 300 m', category: 'Rifle de precisão', slot: 'primary',
     damage: 118, headMult: 2.5, legMult: 0.8, rpm: 44, auto: false, pellets: 1,
     mag: 5, reserve: 25, reload: 3.3,
     spread: 0.085, scopedSpread: 0.0004, moveSpread: 0.12, airSpread: 0.25, crouchMult: 0.8, adsMult: 1,
     perShot: 0, maxSpread: 0, spreadRecover: 1,
     recoil: 5.0, recoilH: 0.6, recoilRecover: 7,
-    range: 200, minFalloff: 1, speed: 0.82, zoom: [20, 5], reticle: 'mildot',
+    range: 200, minFalloff: 1, speed: 0.82, zoom: [20, 5], reticle: 'mildot', action: 'bolt', zero: 100,
     sound: { freq: 520, low: 70, decay: 0.32, gain: 1.15, tail: 0.9 },
     model: { type: 'sniper', body: 0x3b4234, accent: 0x1d1f22 },
     bot: { pref: 35 },
     desc: 'Ferrolho com luneta de dois níveis. Elimina com um disparo no tronco.',
   },
+  m82: {
+    id: 'm82', name: 'M82 .50 BMG', category: 'Rifle de precisão semiautomático', slot: 'primary',
+    damage: 165, headMult: 2.2, legMult: 0.85, rpm: 70, auto: false, pellets: 1,
+    mag: 10, reserve: 30, reload: 4.2, pierce: 2,
+    spread: 0.11, scopedSpread: 0.0005, moveSpread: 0.16, airSpread: 0.3, crouchMult: 0.75, adsMult: 1,
+    perShot: 0, maxSpread: 0, spreadRecover: 1,
+    recoil: 8.5, recoilH: 1.1, recoilRecover: 5.5,
+    range: 400, minFalloff: 1, speed: 0.7, zoom: [18, 4.5], reticle: 'mildot', action: 'semi',
+    ballistic: { v: 853, c: 0.0004 }, zero: 300,
+    caliber: '.50 BMG (12,7 × 99 mm)', optic: 'Luneta 4–18× · retículo mil-dot', rangeText: '100 a 1.000 m',
+    sound: { freq: 360, low: 42, decay: 0.55, gain: 1.45, tail: 1.6 },
+    model: { type: 'm82', body: 0x2c2f33, accent: 0x1b1c1e },
+    bot: { pref: 45 },
+    desc: 'Semiautomático de grande calibre, inspirado no Barrett M82. Pesado e de recuo forte; o projétil atravessa dois alvos e chega longe com pouca queda.',
+  },
+  svd: {
+    id: 'svd', name: 'SVD-63', category: 'Rifle de precisão semiautomático', slot: 'primary',
+    damage: 92, headMult: 2.4, legMult: 0.8, rpm: 140, auto: false, pellets: 1,
+    mag: 10, reserve: 40, reload: 2.8,
+    spread: 0.06, scopedSpread: 0.0012, moveSpread: 0.09, airSpread: 0.2, crouchMult: 0.8, adsMult: 1,
+    perShot: 0.004, maxSpread: 0.02, spreadRecover: 1.5,
+    recoil: 3.4, recoilH: 0.7, recoilRecover: 9,
+    range: 160, minFalloff: 0.9, speed: 0.86, zoom: [22, 5.5], reticle: 'pso', action: 'semi',
+    ballistic: { v: 830, c: 0.0013 }, zero: 300,
+    caliber: '7,62 × 54 mm R', optic: 'Luneta tipo PSO 4–15× · retículo de chevrons', rangeText: '50 a 600 m',
+    sound: { freq: 620, low: 80, decay: 0.3, gain: 1.1, tail: 0.75 },
+    model: { type: 'svd', body: 0x2c2e31, accent: 0xc58a52 },
+    bot: { pref: 30 },
+    desc: 'Semiautomático leve, inspirado no Dragunov SVD: disparos rápidos, recuo moderado e boa mobilidade. Precisa de dois acertos no tronco.',
+  },
+  spectre: {
+    id: 'spectre', name: 'Espectro .338 LM', category: 'Rifle de precisão', slot: 'primary',
+    damage: 125, headMult: 2.5, legMult: 0.8, rpm: 50, auto: false, pellets: 1,
+    mag: 5, reserve: 25, reload: 3.0,
+    spread: 0.08, scopedSpread: 0.0003, moveSpread: 0.11, airSpread: 0.24, crouchMult: 0.8, adsMult: 1,
+    perShot: 0, maxSpread: 0, spreadRecover: 1,
+    recoil: 4.2, recoilH: 0.5, recoilRecover: 8,
+    range: 260, minFalloff: 1, speed: 0.84, zoom: [20, 4], reticle: 'tree', action: 'bolt', cycle: 0.62, suppressed: true,
+    ballistic: { v: 900, c: 0.0009 }, zero: 200,
+    caliber: '.338 Lapua Magnum', optic: 'Luneta tática 4–20× · retículo em árvore (mrad)', rangeText: '100 a 1.200 m',
+    sound: { freq: 300, low: 60, decay: 0.12, gain: 0.55, tail: 0.25, suppressed: true },
+    model: { type: 'spectre', body: 0x8a7a5a, accent: 0x18191b },
+    bot: { pref: 35 },
+    desc: 'Ferrolho moderno com chassi de alumínio e supressor, de estética militar contemporânea. Silencioso, estável e muito preciso.',
+  },
+  lr50: {
+    id: 'lr50', name: 'Horizonte .50 LR', category: 'Rifle de precisão de longo alcance', slot: 'primary',
+    damage: 190, headMult: 2.2, legMult: 0.9, rpm: 30, auto: false, pellets: 1,
+    mag: 5, reserve: 20, reload: 4.6, pierce: 2,
+    spread: 0.13, scopedSpread: 0.0002, moveSpread: 0.2, airSpread: 0.35, crouchMult: 0.7, adsMult: 1,
+    perShot: 0, maxSpread: 0, spreadRecover: 1,
+    recoil: 9, recoilH: 0.8, recoilRecover: 4.5,
+    range: 600, minFalloff: 1, speed: 0.66, zoom: [14, 4, 1.6], reticle: 'tree', reticleFFP: true, action: 'bolt', cycle: 1.1,
+    ballistic: { v: 900, c: 0.00032 }, zero: 1000,
+    caliber: '.50 BMG (12,7 × 99 mm)', optic: 'Luneta 6–50× (três ampliações) · retículo em árvore no primeiro plano focal', rangeText: '1.000 a 2.000 m',
+    sound: { freq: 330, low: 38, decay: 0.62, gain: 1.5, tail: 2.2 },
+    model: { type: 'lr50', body: 0x4a4f3a, accent: 0x161718 },
+    bot: { pref: 0 },
+    desc: 'Ferrolho de cano longo para distâncias extremas. Muito pesado e lento de manejar; a luneta tem três ampliações e retículo em árvore para segurar queda e vento.',
+  },
   bulldog: {
-    id: 'bulldog', name: 'Bulldog 12', category: 'Escopeta', slot: 'primary',
+    id: 'bulldog', name: 'Bulldog 12', caliber: 'Calibre 12', optic: 'Mira aberta', rangeText: '2 a 15 m', category: 'Escopeta', slot: 'primary',
     damage: 17, headMult: 2.0, legMult: 0.75, rpm: 70, auto: false, pellets: 9, pelletSpread: 0.062,
     mag: 7, reserve: 35, reload: 2.8,
     spread: 0.01, moveSpread: 0.02, airSpread: 0.06, crouchMult: 0.9, adsMult: 0.8,
@@ -130,7 +190,7 @@ export const WEAPONS = {
     desc: 'Escopeta de bombeamento. Devastadora em corredores, inútil a distância.',
   },
   fulgor: {
-    id: 'fulgor', name: 'Manoplas Fulgor', category: 'Energia', slot: 'primary',
+    id: 'fulgor', name: 'Manoplas Fulgor', caliber: 'Feixe de energia', optic: 'Sem mira óptica', rangeText: '5 a 40 m', category: 'Energia', slot: 'primary',
     damage: 25, headMult: 2.4, legMult: 0.8, rpm: 480, auto: true, pellets: 1,
     mag: 36, reserve: 144, reload: 2.2, beam: true, pierce: 3,
     spread: 0.003, moveSpread: 0.025, airSpread: 0.08, crouchMult: 0.8, adsMult: 0.6,
@@ -143,7 +203,7 @@ export const WEAPONS = {
     desc: 'Par de manoplas que disparam feixes de luz fulminante, alternando as mãos. O feixe não perde força com a distância e atravessa até três alvos em linha. Células recarregáveis.',
   },
   katana: {
-    id: 'katana', name: 'Katana Kaze', category: 'Corpo a corpo', slot: 'melee', melee: true,
+    id: 'katana', name: 'Katana Kaze', caliber: '—', optic: '—', rangeText: 'Até 2,3 m', category: 'Corpo a corpo', slot: 'melee', melee: true,
     damage: 55, heavyDamage: 95, headMult: 1, legMult: 1, rpm: 140, heavyRpm: 60, auto: true, pellets: 1,
     mag: 1, reserve: 0, reload: 0, reach: 2.3, arc: 0.75,
     spread: 0, moveSpread: 0, airSpread: 0, crouchMult: 1, adsMult: 1, perShot: 0, maxSpread: 0, spreadRecover: 1,
@@ -154,7 +214,7 @@ export const WEAPONS = {
     desc: 'Lâmina leve e veloz. Clique esquerdo corta em sequência; o direito desfere um golpe pesado. Golpes pelas costas causam o dobro de dano.',
   },
   nodachi: {
-    id: 'nodachi', name: 'Nodachi Raijin', category: 'Corpo a corpo', slot: 'melee', melee: true,
+    id: 'nodachi', name: 'Nodachi Raijin', caliber: '—', optic: '—', rangeText: 'Até 2,9 m', category: 'Corpo a corpo', slot: 'melee', melee: true,
     damage: 75, heavyDamage: 130, headMult: 1, legMult: 1, rpm: 85, heavyRpm: 42, auto: true, pellets: 1,
     mag: 1, reserve: 0, reload: 0, reach: 2.9, arc: 0.85,
     spread: 0, moveSpread: 0, airSpread: 0, crouchMult: 1, adsMult: 1, perShot: 0, maxSpread: 0, spreadRecover: 1,
@@ -166,7 +226,7 @@ export const WEAPONS = {
   },
 };
 
-export const PRIMARY_IDS = ['tempest', 'kestrel', 'ratel', 'longinus', 'bulldog', 'fulgor'];
+export const PRIMARY_IDS = ['tempest', 'kestrel', 'ratel', 'longinus', 'm82', 'svd', 'spectre', 'lr50', 'bulldog', 'fulgor'];
 export const SECONDARY_IDS = ['vp9', 'brasa'];
 export const MELEE_IDS = ['katana', 'nodachi'];
 
@@ -188,8 +248,10 @@ export function weaponStats(def) {
     Cadência: Math.min(1, def.rpm / 900),
     'DPS': Math.min(1, dps / 340),
     Precisão: Math.max(0.05, precision),
-    Alcance: Math.min(1, def.range / 60),
-    Mobilidade: Math.min(1, (def.speed - 0.75) / 0.32),
+    Alcance: Math.min(1, def.range / (def.zoom ? 600 : 60)),
+    Mobilidade: Math.max(0.03, Math.min(1, (def.speed - 0.6) / 0.47)),
+    Estabilidade: Math.max(0.05, 1 - Math.min(1, (def.moveSpread + def.airSpread * 0.4) / 0.32)),
+    'Controle de recuo': Math.max(0.05, 1 - Math.min(1, def.recoil / 10)),
   };
 }
 

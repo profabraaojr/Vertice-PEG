@@ -127,9 +127,13 @@
         <div class="train-grid">
           <div class="train-card">
             <h3>Estande de longa distância</h3>
-            <p>Alvos de aço a 25, 50, 100, 150 e 200 metros, com anéis de 1 a 10 pontos. O painel de observação mostra onde cada tiro acertou. O som do aço chega com atraso nas distâncias longas.</p>
+            <p>Alvos de aço com anéis de 1 a 10 pontos. O painel de observação mostra onde cada tiro acertou. O som do aço chega com atraso nas distâncias longas.</p>
+            <label class="opt"><span>Pista</span><div class="seg" id="tr-lane"><button data-v="standard">Padrão (25 a 200 m)</button><button data-v="extreme">Extrema (500 a 2.000 m)</button></div></label>
+            <p class="muted small">Na pista extrema o projétil leva segundos para chegar: o acerto, ou a poeira do erro, aparece depois do tempo de voo, e o observador informa o desvio em metros e em miliradianos.</p>
+            <label class="opt"><span>Rifle</span><div class="seg seg-wrap" id="tr-rifle"><button data-v="longinus">Longinus</button><button data-v="m82">M82 .50</button><button data-v="svd">SVD-63</button><button data-v="spectre">Espectro .338</button><button data-v="lr50">Horizonte .50</button></div></label>
+            <p class="muted small" id="tr-rifle-info"></p>
             <label class="opt"><span>Balística</span><div class="seg" id="tr-ball"><button data-v="basic">Básica (tiro reto)</button><button data-v="real">Realista (queda e vento)</button></div></label>
-            <p class="muted small">Realista: o projétil cai com a gravidade (arma zerada a 100 m) e o vento lateral o desvia; mire acima e contra o vento nas distâncias longas.</p>
+            <p class="muted small">Realista: o projétil cai com a gravidade a partir da distância em que a luneta está zerada (padrão de cada rifle; tecla Z ou o botão no painel muda a zeragem) e o vento lateral o desvia.</p>
             <label class="opt"><span>Vento</span><div class="seg seg-wrap" id="tr-wind"><button data-v="none">Sem vento</button><button data-v="weak">Fraco lateral</button><button data-v="moderate">Moderado lateral</button><button data-v="strong">Forte lateral</button><button data-v="head">Frontal</button><button data-v="tail">Traseiro</button><button data-v="variable">Variável</button></div></label>
             <p class="muted small">O vento desvia o projétil conforme a distância: quase nada a 25 m, bastante a 200 m. As birutas ao longo da raia mostram a direção e a intensidade; compense com os pontos do retículo da luneta.</p>
             <label class="opt"><span>Modo</span><div class="seg" id="tr-rvar"><button data-v="free">Livre</button><button data-v="challenge">Desafio: 10 tiros</button></div></label>

@@ -1,7 +1,7 @@
 // Núcleo da partida: modos, rodadas, disparos, dano, renascimento e câmera.
 import * as THREE from 'three';
 import { StoryMission, missionById, AGENT } from './story.js';
-import { Training } from './training.js';
+import { Training, EXTREME_SOCKS } from './training.js';
 import { ScopeView } from './scope.js';
 import { Wind, Windsock, WindIndicator, WINDSOCK_SPOTS, windDeflect } from './wind.js';
 import { Player } from './player.js';
@@ -28,7 +28,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const oArr = [0, 0, 0];
 const dArr = [0, 0, 0];
 
-const PRIMARY_WEIGHTS = { tempest: 3, kestrel: 3, ratel: 2.2, longinus: 1.2, bulldog: 1.4, fulgor: 1.6 };
+const PRIMARY_WEIGHTS = { tempest: 3, kestrel: 3, ratel: 2.2, longinus: 1.2, m82: 0.5, svd: 0.9, spectre: 0.7, lr50: 0, bulldog: 1.4, fulgor: 1.6 };
 
 function forward(yaw, pitch, out) {
   const cp = Math.cos(pitch);
@@ -75,6 +75,7 @@ export class Game {
   setupWind() {
     for (const s of this.socks) s.dispose();
     this.socks = (WINDSOCK_SPOTS[this.map.id] || []).map(([x, y, z, h]) => new Windsock(this.scene, x, y, z, h));
+    if (this.training && this.training.extreme) for (const [x, z] of EXTREME_SOCKS) this.socks.push(new Windsock(this.scene, x, 0, z, 4.2, 2.4));
     if (this.config.mode === 'range') this.wind.setScenario(this.config.wind || 'none');
     else this.wind.randomize(0.5, 6.5);
     this.wind.remote = false;
@@ -111,7 +112,7 @@ export class Game {
       this.training = new Training(this, this.config);
       const dojo = this.training.area === 'dojo';
       const melee = this.config.weapon === 'nodachi' ? 'nodachi' : 'katana';
-      this.player.setLoadout(dojo ? settings.loadout.primary : 'longinus', 'vp9', true, melee);
+      this.player.setLoadout(dojo ? settings.loadout.primary : (this.config.rifle || 'longinus'), 'vp9', true, melee);
       this.bots = [];
       this.remotes = [];
       this.combatants = [this.player];
@@ -122,7 +123,7 @@ export class Game {
       this.effects.clear();
       this.phase = 'live';
       this.phaseT = 0;
-      this.announce(dojo ? 'DOJÔ' : 'ESTANDE DE TIRO', dojo ? (this.training.challenge ? 'Desafio: 60 segundos' : 'Golpe leve: diagonal · pesado: horizontal') : (this.training.challenge ? 'Desafio: 10 alvos, um tiro cada' : 'Alvos de 25 a 200 m'), 3, null, 'roundStart');
+      this.announce(dojo ? 'DOJÔ' : 'ESTANDE DE TIRO', dojo ? (this.training.challenge ? 'Desafio: 60 segundos' : 'Golpe leve: diagonal · pesado: horizontal') : (this.training.challenge ? `Desafio: ${this.training.queue.length} alvos, um tiro cada` : this.training.extreme ? 'Pista extrema: alvos de 500 a 2.000 m' : 'Alvos de 25 a 200 m'), 3, null, 'roundStart');
       this.active = true;
       this.paused = false;
       this.setupWind();
@@ -443,7 +444,7 @@ export class Game {
       const th = this.training.shoot(shooter, o, d, def, best);
       if (th) {
         _end.copy(th.point);
-        this.effects.impact(_end, _n.set(0, 0, 1), 'metal');
+        if (!th.deferred) this.effects.impact(_end, _n.set(0, 0, 1), 'metal'); // pista extrema: o impacto chega depois
         return _end;
       }
     }

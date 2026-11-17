@@ -10,10 +10,11 @@ const HIP = {
   pistol: [0.08, -0.1, -0.4], revolver: [0.08, -0.1, -0.42], smg: [0.11, -0.17, -0.36],
   ar: [0.11, -0.17, -0.35], ar2: [0.11, -0.175, -0.35], sniper: [0.11, -0.18, -0.35], shotgun: [0.11, -0.17, -0.35],
   katana: [0.17, -0.17, -0.44], nodachi: [0.18, -0.19, -0.46], gauntlet: [0, -0.23, -0.46],
+  m82: [0.115, -0.19, -0.36], svd: [0.11, -0.175, -0.35], spectre: [0.11, -0.18, -0.35], lr50: [0.115, -0.195, -0.37],
 };
 // inclinação lateral de repouso (fora da mira). A direção do cano não entra aqui: ela é
 // calculada para cada arma de modo que a linha do cano cruze o centro da mira (ver aimAt).
-const HIP_ROLL = { pistol: -0.05, revolver: -0.05, smg: -0.16, ar: -0.18, ar2: -0.18, sniper: -0.16, shotgun: -0.18 };
+const HIP_ROLL = { pistol: -0.05, revolver: -0.05, smg: -0.16, ar: -0.18, ar2: -0.18, sniper: -0.16, shotgun: -0.18, m82: -0.12, svd: -0.16, spectre: -0.15, lr50: -0.11 };
 const CONVERGE = 9; // distância (m) em que a linha do cano encontra o centro da tela
 
 // Ângulos (rx, ry) que fazem a linha do cano, saindo da posição de repouso, passar por (0, 0, -D).
@@ -128,6 +129,31 @@ const GRIPS = {
     const recv = sdBox([0, 0.03, 0.0], [0.024, 0.03, 0.12], 0.006);
     const hg = sdUnion(sdBox([0, 0.024, -0.215], [0.025, 0.02, 0.125], 0.008), sdBox([0, 0.056, -0.3], [0.0145, 0.0145, 0.2], 0.012));
     return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.026, -0.2) }];
+  },
+  // rifles adicionais (ver js/rifles.js): punho, caixa da culatra e guarda-mão de cada modelo
+  m82() {
+    const g = gripShape([-0.034, -0.008], [-0.047, -0.116], 0.036, 0.048);
+    const recv = sdBox([0, 0.046, -0.15], [0.031, 0.052, 0.29], 0.004);
+    const fore = sdBox([0, 0.047, -0.36], [0.031, 0.051, 0.09], 0.004);
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(fore, 0.03, -0.34, { phi: 0.75 }) }];
+  },
+  svd() {
+    const g = gripShape([-0.06, -0.01], [-0.05, -0.112], 0.036, 0.042);
+    const recv = sdBox([0, 0.03, -0.04], [0.021, 0.037, 0.165], 0.004);
+    const hg = sdUnion(sdBox([0, 0.028, -0.318], [0.023, 0.022, 0.113], 0.008), sdBox([0, 0.064, -0.31], [0.019, 0.01, 0.1], 0.008));
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.03, -0.27) }];
+  },
+  spectre() {
+    const g = gripShape([-0.033, -0.008], [-0.045, -0.118], 0.034, 0.046);
+    const recv = sdBox([0, 0.03, -0.04], [0.025, 0.03, 0.14], 0.006);
+    const hg = sdBox([0, 0.046, -0.37], [0.032, 0.032, 0.19], 0.01);
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.046, -0.27) }];
+  },
+  lr50() {
+    const g = gripShape([-0.035, -0.008], [-0.048, -0.121], 0.036, 0.05);
+    const recv = sdBox([0, 0.034, -0.05], [0.029, 0.034, 0.17], 0.006);
+    const hg = sdBox([0, 0.053, -0.46], [0.04, 0.034, 0.24], 0.01);
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.05, -0.29) }];
   },
   shotgun() {
     const g = gripShape([-0.04, -0.01], [-0.083, -0.114], 0.036, 0.05);
@@ -332,12 +358,12 @@ export class ViewModel {
     this.flash.visible = true;
     this.flash.material.rotation = Math.random() * Math.PI;
     const t = d.model.type;
-    const s = t === 'shotgun' || t === 'sniper' ? 0.2 : 0.13;
+    const s = this.current.gun.flashScale ?? (t === 'shotgun' || t === 'sniper' ? 0.2 : 0.13);
     this.flash.scale.setScalar(s * (0.8 + Math.random() * 0.4));
     this.flashT = 0.045;
     this.flashLight.intensity = 6;
-    if (t === 'shotgun' || t === 'sniper') this.cycleT = 0;
-    if (t === 'pistol') this.slideKick = 1;
+    if (t === 'shotgun' || d.action === 'bolt') this.cycleT = 0;
+    if (t === 'pistol' || d.action === 'semi') this.slideKick = 1;
   }
 
   /*
@@ -367,10 +393,10 @@ export class ViewModel {
     this.kickSide = damp(this.kickSide, 0, 12, dt);
     this.slideKick = damp(this.slideKick, 0, 22, dt);
     this.switchT = Math.min(1, this.switchT + dt / 0.45);
-    this.cycleT = Math.min(1, this.cycleT + dt / 0.7);
+    this.cycleT = Math.min(1, this.cycleT + dt / (this.def.cycle || 0.7));
 
     const hip = this.current.hip;
-    const adsPos = [0, -gun.sightY * this.current.holder.scale.y, this.current.ads];
+    const adsPos = [-(gun.sightX || 0) * this.current.holder.scale.x, -gun.sightY * this.current.holder.scale.y, this.current.ads];
     const a = s.ads;
     let px = lerp(hip[0], adsPos[0], a);
     let py = lerp(hip[1], adsPos[1], a);
@@ -418,10 +444,12 @@ export class ViewModel {
       const open = s.empty && s.reload == null ? 0.032 : 0;
       gun.slide.position.z = Math.max(open, this.slideKick * 0.034);
     }
+    // semiautomáticos: a manopla de manejo recua com o ferrolho a cada disparo
+    if (this.def.action === 'semi' && gun.slide) gun.slide.position.z = this.slideKick * (type === 'm82' ? 0.09 : 0.06);
     // ciclo de bombeamento / ferrolho do rifle de precisão
     const c = this.cycleT < 1 ? Math.sin(this.cycleT * Math.PI) : 0;
     if (gun.pump) gun.pump.position.z = c * 0.085;
-    if (type === 'sniper' && gun.slide) gun.slide.position.z = c * 0.07;
+    if (this.def.action === 'bolt' && gun.slide) gun.slide.position.z = c * (type === 'lr50' ? 0.11 : 0.075);
     if (c > 0) { rz += 0.12 * c * (1 - a); rx += 0.06 * c; }
 
     // inspeção

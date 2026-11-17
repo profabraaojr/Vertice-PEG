@@ -613,6 +613,7 @@ body.training #topbar, body.training #train-stats, body.training #scoreboard, bo
 #train-hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--head); }
 .tr-panel { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); top: 20px; width: 330px; padding: 10px 12px; background: rgba(8, 10, 13, 0.6); border-left: 3px solid var(--accent); font-size: 13px; }
 .tr-panel h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.tr-zero { pointer-events: auto; font: inherit; font-size: 11px; color: var(--accent); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,138,61,0.5); border-radius: 3px; padding: 1px 6px; margin-left: 4px; cursor: pointer; }
 .tr-lines { display: flex; flex-direction: column; gap: 3px; }
 .tr-lines b { color: #ffd166; }
 .tr-timer { margin-top: 8px; padding: 4px 8px; background: rgba(30, 60, 90, 0.8); font-size: 15px; letter-spacing: 0.1em; }
@@ -657,3 +658,4 @@ body.touch.scoped #ammo-box { opacity: 0; }
 #wind-hud[data-level="3"] .wh-dial i { background: none; }
 body.touch #wind-hud { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: auto; top: calc(62px + env(safe-area-inset-top, 0px)); transform: scale(0.85); transform-origin: top right; }
 body.story #wind-hud { bottom: 100px; }
+.specs > div:nth-child(-n+3) { grid-column: 1 / -1; }

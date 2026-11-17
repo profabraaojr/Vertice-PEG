@@ -113,7 +113,7 @@ Falhas comuns: o agente ser abatido.
 
 ## Luneta, vento e birutas
 
-**Luneta.** Nos rifles de precisão, o botão direito (no celular, o botão LUNETA) alterna dois níveis de ampliação (no Longinus, cerca de 4× e 16×). A arma sobe até o olho, a imagem se fecha num túnel e a ampliação cresce suavemente; a precisão total vale quando a imagem estabiliza. O retículo é mil-dot de segundo plano focal, como nas lunetas táticas usadas no M82: fica fixo no centro, tem o mesmo tamanho nos dois níveis e, na ampliação máxima, cada ponto vale 1 mil (1 metro a 1.000 m, 10 cm a 100 m). Use os pontos para compensar o vento e a queda.
+**Luneta.** Nos rifles de precisão, o botão direito (no celular, o botão LUNETA) alterna dois níveis de ampliação (no Longinus, cerca de 4× e 16×). A arma sobe até o olho, a imagem se fecha num túnel e a ampliação cresce suavemente; a precisão total vale quando a imagem estabiliza. O retículo depende do rifle (veja Rifles de precisão). No Longinus e no M82 é mil-dot de segundo plano focal, como nas lunetas táticas usadas no M82: fica fixo no centro, tem o mesmo tamanho nos dois níveis e, na ampliação máxima, cada ponto vale 1 mil (1 metro a 1.000 m, 10 cm a 100 m). Use os pontos para compensar o vento e a queda.
 
 **Vento.** Toda partida tem vento, com direção e intensidade que mudam aos poucos: cada condição dura de 25 a 45 segundos e há pequenas rajadas naturais. O vento desvia os projéteis conforme o "atraso" do projétil no ar (lag = c · D² / v0), então o efeito cresce com o quadrado da distância: quase nada nos tiros curtos dos mapas e bastante no estande. A mira não corrige o vento automaticamente. No multijogador, o anfitrião envia o vento para todos.
 
@@ -121,18 +121,36 @@ Falhas comuns: o agente ser abatido.
 
 **Indicador na tela** (opcional, em Configurações → Interface): seta da direção relativa ao seu olhar e três barras (fraco, moderado, forte), sem números.
 
+## Rifles de precisão
+
+Cinco rifles de precisão, todos com luneta, retículo próprio, sons, recuo e animações independentes, e integrados ao vento e à balística. Os nomes indicam a inspiração sem reproduzir marcas.
+
+| Rifle | Ação | Calibre | Luneta e retículo | Distância prevista |
+|---|---|---|---|---|
+| Longinus .338 | ferrolho | .338 Lapua Magnum | 4–16×, mil-dot | 30 a 300 m |
+| M82 .50 BMG | semiautomática | .50 BMG | 4–18×, mil-dot; bipé e freio de boca | 100 a 1.000 m |
+| SVD-63 | semiautomática | 7,62 × 54 mm R | tipo PSO 4–15×, montada à esquerda, com chevrons, escala de deriva e curva de distância | 50 a 600 m |
+| Espectro .338 LM | ferrolho | .338 Lapua Magnum | tática 4–20×, retículo em árvore (mrad); chassi moderno e supressor | 100 a 1.200 m |
+| Horizonte .50 LR | ferrolho | .50 BMG | 6–50× em três ampliações, retículo em árvore no primeiro plano focal | 1.000 a 2.000 m |
+
+O M82 inspira-se no Barrett M82, o SVD-63 no Dragunov SVD e o Espectro na estética militar contemporânea de jogos de atirador de elite; o Horizonte é um projeto próprio para distâncias extremas. O M82 e o Horizonte atravessam dois alvos. O M82 recua com a culatra e o SVD com o ferrolho a cada tiro; o Espectro e o Horizonte exigem o ciclo do ferrolho (o do Horizonte é mais lento). O Espectro é suprimido: o disparo é um estalo abafado. A ficha de cada arma no arsenal mostra categoria, calibre, luneta, distância prevista, ação, ampliações e barras de dano, cadência, precisão, alcance, mobilidade, estabilidade e controle de recuo.
+
+No retículo de primeiro plano focal (Horizonte), o desenho cresce com a ampliação e cada marca vale sempre 1 mil. Nos de segundo plano focal (os demais), o retículo tem tamanho fixo e está calibrado na ampliação máxima.
+
 ## Centro de treinamento
 
 No menu principal, **Centro de treinamento** leva a um complexo com duas áreas (dá para ir de uma à outra a pé):
 
 **Estande de longa distância**
-- Raia de 24 m de largura que sai do galpão de tiro e vai até uma barreira de terra a 230 m, com placas de distância e uma biruta.
-- Alvos de aço com anéis de 1 a 10 pontos a 25, 50, 100, 150 e 200 m. Ao serem atingidos, balançam, e o "tim" do aço chega com atraso nas distâncias longas (velocidade do som).
+- Raia de 24 m de largura que sai do galpão de tiro e vai até uma barreira de terra a 230 m, com placas de distância e birutas.
+- **Pista padrão:** alvos de aço com anéis de 1 a 10 pontos a 25, 50, 100, 150 e 200 m. Ao serem atingidos, balançam, e o "tim" do aço chega com atraso nas distâncias longas (velocidade do som).
 - Painel de observação: mostra a face do alvo com os últimos impactos e diz a distância do centro (por exemplo, "6 cm abaixo, 4 cm à direita").
 - **Balística básica:** o tiro segue reto até o alvo.
-- **Balística realista:** o projétil cai com a gravidade (arma zerada a 100 m) e é desviado por um vento lateral sorteado; é preciso mirar acima e contra o vento nas distâncias longas.
+- **Pista extrema:** a barreira do fundo some e o terreno se abre até o horizonte; os alvos ficam a 500, 1.000, 1.500 e 2.000 m (diâmetros de 2 a 5,2 m), em ângulos diferentes para que nenhum encubra outro. O projétil leva segundos para chegar (cerca de 1,5 s a 1.000 m e 3,7 s a 2.000 m com o Horizonte .50): o acerto, ou a nuvem de poeira do erro, aparece depois do tempo de voo. Um observador informa o desvio em metros e em miliradianos, a unidade do retículo em árvore, para o ajuste do disparo seguinte. Birutas maiores ao longo da pista continuam legíveis pela luneta.
+- **Rifle:** Longinus, M82 .50, SVD-63, Espectro .338 ou Horizonte .50; o menu mostra calibre, luneta e distância prevista de cada um.
+- **Balística realista:** o projétil cai com a gravidade e é desviado pelo vento. A luneta vem zerada na distância padrão de cada rifle (Longinus 100 m, Espectro 200 m, M82 e SVD 300 m, Horizonte 1.000 m); a tecla Z ou o botão no painel muda a zeragem (100 a 2.000 m), como girar a torre de elevação. Com o Horizonte zerado a 1.000 m, o tiro a 2.000 m cai cerca de 44 m (22 mil), além do retículo: é preciso rezerar.
 - **Vento** (cenários de treino): sem vento, fraco, moderado ou forte lateral, frontal, traseiro ou variável. A 200 m, o vento forte lateral desloca o impacto cerca de 36 cm (≈1,8 mil); a 25 m, menos de 1 cm.
-- **Livre** ou **Desafio de 10 tiros**: dois alvos por distância, da mais curta à mais longa, um disparo cada; os pontos do anel valem mais quanto maior a distância (25 m vale 1×, 200 m vale 8×).
+- **Livre** ou **Desafio**: dois alvos por distância, da mais curta à mais longa, um disparo cada; os pontos do anel valem mais quanto maior a distância (na pista padrão, 25 m vale 1× e 200 m vale 8×; na extrema, 500 m vale 2× e 2.000 m vale 8×).
 
 **Dojô · cortes em bambu**
 - Doze suportes de bambu. Golpe leve corta na diagonal (alternando o lado); golpe pesado (botão direito ou MIRA) corta na horizontal. O corte acontece na altura da mira, a parte de cima cai, e o bambu é reposto quando fica curto.
@@ -218,7 +236,7 @@ Durante a partida, **Enter** ou **T** abre o chat (no celular, o botão CHAT). N
 
 **Modos.** *Equipe contra equipe* (Vanguarda × Sentinela) em rodadas de eliminação, com fase de preparação, cronômetro de 1:55 e vitória por número de rodadas; quando o tempo acaba, vence a equipe com mais sobreviventes ou, em caso de empate, a que tem mais vida somada. *Mata-mata*, todos contra todos, com renascimento em pontos seguros e limite de eliminações ou de tempo. *Treinamento*, com bots que renascem continuamente, munição infinita, estatísticas de precisão e a opção de bots que não revidam.
 
-**Armas.** Dez armas em sete categorias: pistolas (VP-9 e Brasa .50), submetralhadora (Ratel MK2), rifles de assalto (Tempest AR-K e Kestrel M7), rifle de precisão (Longinus .338), escopeta (Bulldog 12), energia (Manoplas Fulgor) e corpo a corpo (katanas Kaze e Nodachi Raijin). Cada uma tem dano, multiplicador na cabeça, cadência, pente, reserva, tempo de recarga, recuo vertical e horizontal, dispersão (que cresce com movimento, salto e disparos seguidos e diminui agachado ou mirando), queda de dano com a distância, mobilidade, modelo 3D e som próprios.
+**Armas.** Catorze armas em sete categorias: pistolas (VP-9 e Brasa .50), submetralhadora (Ratel MK2), rifles de assalto (Tempest AR-K e Kestrel M7), rifles de precisão (Longinus .338, M82 .50 BMG, SVD-63, Espectro .338 LM e Horizonte .50 LR), escopeta (Bulldog 12), energia (Manoplas Fulgor) e corpo a corpo (katanas Kaze e Nodachi Raijin). Cada uma tem dano, multiplicador na cabeça, cadência, pente, reserva, tempo de recarga, recuo vertical e horizontal, dispersão (que cresce com movimento, salto e disparos seguidos e diminui agachado ou mirando), queda de dano com a distância, mobilidade, modelo 3D e som próprios.
 
 **Manoplas e katanas.** As Manoplas Fulgor são um par de luvas de energia que disparam feixes de luz alternando as mãos; o feixe não perde força com a distância, atravessa até três combatentes em linha (as paredes o detêm) e as células se recarregam com R. As espadas ocupam um terceiro espaço (tecla 3): o botão esquerdo corta em sequência, o direito desfere um golpe pesado, e um golpe pelas costas causa o dobro de dano. A Katana Kaze é leve e rápida; a Nodachi Raijin tem mais alcance e dano, com golpes mais lentos. Parte dos bots tem perfil de espadachim e avança com a lâmina.
 
@@ -250,6 +268,7 @@ js/map.js           layouts e temas dos quatro mapas, geometria, colisores, rada
 js/physics.js       colisão e raycast contra o cenário
 js/nav.js           A* e suavização de trajetos
 js/guns.js          modelos detalhados das armas (perfis extrudados, materiais, reflexos)
+js/rifles.js        modelos dos rifles M82, SVD-63, Espectro e Horizonte
 js/preview.js       prévia 3D das armas no arsenal
 js/models.js        modelos dos personagens (rosto, olhos, cabelo, farda)
 js/profiles.js      perfis dos alunos, opções de aparência e camuflagens
@@ -259,7 +278,7 @@ js/controleditor.js editor "Personalizar controles"
 js/story.js         modo história: campanha, motor de missões, rendição, prisão, reféns e relatório
 js/hands.js         mãos enluvadas articuladas da visão em primeira pessoa
 js/training.js      centro de treinamento: estande de longa distância e dojô de bambus
-js/scope.js         luneta: ocular, retículo mil-dot e transição
+js/scope.js         luneta: ocular, retículos (mil-dot, PSO, árvore; segundo ou primeiro plano focal) e transição
 js/wind.js          vento dinâmico, desvio balístico, birutas e indicador
 js/pwa.js           instalação como aplicativo e registro do service worker
 js/lobby.js         sala de espera: times, pronto, configurações do anfitrião e chat
