@@ -123,6 +123,14 @@ export function nicknameProblem(raw) {
   return '';
 }
 
+// Chat: palavras ofensivas viram asteriscos (mesma lista do apelido); o resto da frase fica.
+export function maskProfanity(text) {
+  return String(text || '').replace(/[\p{L}\p{N}@$!]+/gu, (w) => (BLOCKED.some((b) => fold(w).includes(fold(b))) ? '*'.repeat(Math.min(8, w.length)) : w));
+}
+
+// Nome recebido pela rede: aceito se passar pelas mesmas regras do apelido.
+export const safeName = (raw, fallback) => (nicknameProblem(raw) ? fallback : cleanNickname(raw));
+
 export const activeProfile = () => (settings.nickname && !nicknameProblem(settings.nickname) ? cleanNickname(settings.nickname) : '');
 export const playerName = () => activeProfile() || 'Você';
 export const getLook = () => sanitizeLook(settings.look, activeProfile() || 'Jogador');

@@ -5,7 +5,7 @@
 import { settings, saveSettings } from './settings.js';
 import { TEAMS } from './config.js';
 import { MAPS, MAP_IDS } from './map.js';
-import { activeProfile, activeLook, nicknameProblem, cleanNickname } from './profiles.js';
+import { activeProfile, activeLook, nicknameProblem, cleanNickname, maskProfanity } from './profiles.js';
 import { normalizeCode } from './net.js';
 
 const $ = (id) => document.getElementById(id);
@@ -248,7 +248,13 @@ export class Lobby {
     } else if (msg.t === 'ready') {
       m.ready = !!msg.ready;
     } else if (msg.t === 'chat') {
-      const text = String(msg.text || '').slice(0, 120).trim();
+      // no máximo uma mensagem por segundo (e cinco a cada dez segundos) por convidado
+      const now = performance.now();
+      m.chatTimes = (m.chatTimes || []).filter((t) => now - t < 10000);
+      if (m.chatTimes.length >= 5 || now - (m.lastChat || 0) < 1000) return;
+      m.lastChat = now;
+      m.chatTimes.push(now);
+      const text = maskProfanity(String(msg.text || '').slice(0, 120)).trim();
       if (!text) return;
       this.relayChat(m, text, peerId);
       return;
@@ -367,7 +373,7 @@ export class Lobby {
 
   // ---------- chat ----------
   sendChat(text) {
-    text = String(text || '').slice(0, 120).trim();
+    text = maskProfanity(String(text || '').slice(0, 120)).trim();
     if (!text || !this.net.active) return;
     if (this.isHost) {
       this.relayChat(this.me() || { name: this.name(), team: 'A' }, text, null);
@@ -384,7 +390,7 @@ export class Lobby {
   }
 
   onChat(msg) {
-    this.addChat(msg.name, msg.team, msg.text);
+    this.addChat(String(msg.name || '').slice(0, 18), msg.team, maskProfanity(String(msg.text || '').slice(0, 120)));
   }
 
   // mensagem na sala e, durante a partida, na tela do jogo

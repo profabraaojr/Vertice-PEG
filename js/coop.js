@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { Proxy } from './remote.js';
 import { Player } from './player.js';
-import { TEAMS, WEAPONS, safePrimary, heavyAllowed } from './config.js';
+import { TEAMS, WEAPONS, safePrimary, PRIMARY_IDS, HEAVY_IDS, SECONDARY_IDS, MELEE_IDS } from './config.js';
 import { HeavyPickups } from './ordnance.js';
 import { settings } from './settings.js';
 import { rayAABB } from './utils.js';
@@ -46,7 +46,7 @@ export function installCoop(Game) {
     const r = new Proxy({ id: 100 + peer.id, name: pname, team, color, peerId: peer.id, look: peer.look ? sanitizeLook(peer.look, peer.name) : null });
     r.look = peer.look ? sanitizeLook(peer.look, peer.name) : null;
     const lo = peer.loadout || {};
-    r.setLoadout(WEAPONS[lo.primary] ? safePrimary(lo.primary, this.config.mode) : 'tempest', WEAPONS[lo.secondary] ? lo.secondary : 'vp9', this.config.mode === 'training', lo.melee);
+    r.setLoadout((PRIMARY_IDS.includes(lo.primary) || HEAVY_IDS.includes(lo.primary)) ? safePrimary(lo.primary, this.config.mode) : 'tempest', SECONDARY_IDS.includes(lo.secondary) ? lo.secondary : 'vp9', this.config.mode === 'training', MELEE_IDS.includes(lo.melee) ? lo.melee : 'katana');
     r.netWeapon = r.weapons.primary ? r.weapons.primary.def : r.weapons.secondary.def;
     r.addNameTag(r.name, TEAMS[team] ? TEAMS[team].css : '#ffffff');
     this.scene.add(r.model.root);
@@ -105,40 +105,68 @@ export function installCoop(Game) {
     if (this.isHost) this.fxQueue.push(entry);
   };
 
+  // ---------- validação das mensagens dos convidados (o anfitrião é a autoridade) ----------
+  const num = (v, lim = 1e4) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= lim;
+  const vec3 = (a, lim) => Array.isArray(a) && a.length >= 3 && num(a[0], lim) && num(a[1], lim) && num(a[2], lim);
+  const SPEED_MAX = 7.6; // m/s (corrida 6,6) com folga para oscilações da rede
+  // armas que o convidado pode usar: as do equipamento escolhido e a arma pesada que ele pegou
+  P.remoteMayUse = function (r, id) {
+    const lo = r.loadout || {};
+    if (id === lo.primary || id === lo.secondary || id === lo.melee) return true;
+    return !!(r.heavy && r.heavy.weapon === id);
+  };
+
   P.hostHandle = function (peerId, msg) {
     if (!this.active) return;
     const r = this.combatants.find((c) => c.isRemote && c.peerId === peerId);
     if (!r) return;
     switch (msg.t) {
-      case 'in':
+      case 'in': {
         if (msg.s !== r.spawnSeq || !r.alive) return;
-        {
-          // arma pesada informada por quem não a pegou: mostra o rifle padrão
-          const wd = WEAPONS[msg.w];
-          const wid = wd && wd.heavy && !heavyAllowed(this.config.mode) && !(r.heavy && r.heavy.weapon === msg.w) ? 'tempest' : msg.w;
-          r.applyNet(msg.p[0], msg.p[1], msg.p[2], msg.yw, msg.pt, msg.ct, wid, msg.v[0], msg.v[1]);
-        }
+        if (!vec3(msg.p, 400) || !Array.isArray(msg.v) || !num(msg.v[0], 50) || !num(msg.v[1], 50) || !num(msg.yw, 1e3) || !num(msg.pt, 10) || !num(msg.ct, 2)) return;
+        // deslocamento máximo desde a última posição aceita (sem teletransporte)
+        const dt = Math.max(0.03, this.time - (r.lastInT ?? this.time - 0.1));
+        r.lastInT = this.time;
+        const base = r.target;
+        let [x, y, z] = msg.p;
+        const dx = x - base.x, dz = z - base.z, d = Math.hypot(dx, dz), lim = SPEED_MAX * dt + 1.2;
+        if (d > lim) { x = base.x + (dx / d) * lim; z = base.z + (dz / d) * lim; r.speedFlags = (r.speedFlags || 0) + 1; }
+        y = Math.max(-1, Math.min(14, y));
+        // arma em mãos: só as permitidas; o restante aparece como a arma principal do equipamento
+        const wid = WEAPONS[msg.w] && this.remoteMayUse(r, msg.w) ? msg.w : (r.loadout && r.loadout.primary) || 'tempest';
+        r.applyNet(x, y, z, msg.yw, msg.pt, msg.ct, wid, msg.v[0], msg.v[1]);
         break;
+      }
       case 'fire': {
         if (!r.alive || !this.canShoot(r)) return;
         const def = WEAPONS[msg.w];
-        if (!def || def.melee) return;
-        if (def.heavy && !heavyAllowed(this.config.mode) && !(r.heavy && r.heavy.weapon === def.id)) return; // arma pesada só com quem pegou a foto ou a caixa
+        if (!def || def.melee || !this.remoteMayUse(r, def.id)) return; // arma fora do equipamento (ou pesada sem a foto/caixa)
+        if (!vec3(msg.o, 400) || !Array.isArray(msg.d) || !msg.d.length) return;
+        const dirs = msg.d.slice(0, Math.max(1, def.pellets)).filter((dd) => vec3(dd, 2) && Math.hypot(dd[0], dd[1], dd[2]) > 0.5);
+        if (!dirs.length) return;
+        // cadência: intervalo mínimo entre disparos da mesma arma (25% de tolerância para a rede)
+        const ammo = (r.ammoNet || (r.ammoNet = {}))[def.id] || (r.ammoNet[def.id] = { mag: def.mag, last: -99 });
+        const gap = this.time - ammo.last;
+        if (gap < (60 / def.rpm) * 0.75) return;
+        // pente: vazio só volta a disparar depois do tempo de recarga (pausa longa também conta como recarga)
+        if (gap >= def.reload * 0.8) ammo.mag = def.mag;
+        if (ammo.mag <= 0) return;
+        ammo.mag--;
+        ammo.last = this.time;
         r.spawnProtect = 0;
         r.shots++;
         _o.set(msg.o[0], msg.o[1], msg.o[2]);
+        // a origem informada precisa estar perto do corpo do convidado
+        if (_o.distanceTo(r.pos) > 3) _o.set(r.pos.x, r.pos.y + r.eyeHeight(), r.pos.z);
         if (def.rocket) {
-          if (_o.distanceTo(r.pos) > 3) _o.set(r.pos.x, r.pos.y + r.eyeHeight(), r.pos.z);
-          const dd = (msg.d || [])[0];
-          if (dd) this.ordnance.launch(r, _o.clone(), _d.set(dd[0], dd[1], dd[2]).normalize().clone(), def);
+          const dd = dirs[0];
+          this.ordnance.launch(r, _o.clone(), _d.set(dd[0], dd[1], dd[2]).normalize().clone(), def);
           r.spottedUntil = this.time + 1.5;
           break;
         }
-        // a origem informada precisa estar perto do corpo do convidado
-        if (_o.distanceTo(r.pos) > 3) _o.set(r.pos.x, r.pos.y + r.eyeHeight(), r.pos.z);
         this.fxBegin();
         const hitsBefore = r.hits;
-        for (const dd of (msg.d || []).slice(0, 12)) {
+        for (const dd of dirs) {
           _d.set(dd[0], dd[1], dd[2]).normalize();
           this.resolveShot(r, _o, _d, def);
         }
@@ -150,7 +178,10 @@ export function installCoop(Game) {
       }
       case 'melee': {
         const def = WEAPONS[msg.w];
-        if (!r.alive || !def || !def.melee || !this.canShoot(r)) return;
+        if (!r.alive || !def || !def.melee || !this.canShoot(r) || !this.remoteMayUse(r, def.id)) return;
+        const rpm = msg.h ? def.heavyRpm : def.rpm;
+        if (this.time - (r.lastMeleeT ?? -99) < (60 / rpm) * 0.75) return;
+        r.lastMeleeT = this.time;
         r.spawnProtect = 0;
         r.pendingMelee = { t: msg.h ? 0.22 : 0.12, heavy: !!msg.h, def };
         r.model.swing();
@@ -158,16 +189,22 @@ export function installCoop(Game) {
         this.noise(r.pos, 8, r);
         break;
       }
-      case 'loadout':
-        r.setLoadout(safePrimary(msg.primary, this.config.mode), msg.secondary, this.config.mode === 'training', msg.melee);
-        r.heavy = null; r.heavyPrev = null;
+      case 'loadout': {
+        // só armas existentes, cada uma na sua categoria
+        const okP = (PRIMARY_IDS.includes(msg.primary) || HEAVY_IDS.includes(msg.primary)) ? safePrimary(msg.primary, this.config.mode) : 'tempest';
+        const okS = SECONDARY_IDS.includes(msg.secondary) ? msg.secondary : 'vp9';
+        const okM = MELEE_IDS.includes(msg.melee) ? msg.melee : 'katana';
+        r.setLoadout(okP, okS, this.config.mode === 'training', okM);
+        r.heavy = null; r.heavyPrev = null; r.ammoNet = {};
         break;
+      }
       case 'pick':
-        if (this.pickups && r.alive) this.pickups.grant(r, msg.k);
+        if (this.pickups && r.alive && (msg.k === 'photo' || msg.k === 'crate')) this.pickups.grant(r, msg.k);
         break;
       default: break;
     }
   };
+
 
   P.removePeer = function (peerId, name) {
     const r = this.combatants.find((c) => c.isRemote && c.peerId === peerId);

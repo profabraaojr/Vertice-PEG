@@ -247,6 +247,19 @@ Durante a partida, **Enter** ou **T** abre o chat (no celular, o botão CHAT). N
 - o servidor de salas e os de retransmissão são gratuitos e mantidos pelo projeto PeerJS, sem garantia de disponibilidade. Se estiverem fora do ar, há uma **conexão alternativa sem servidor** (troca manual de códigos) na própria tela, que funciona melhor entre aparelhos da mesma rede;
 - o movimento de cada jogador é decidido no próprio aparelho, o que pressupõe confiança entre os participantes.
 
+## Segurança
+
+Proteções em vigor (revisadas na verificação de segurança do projeto):
+
+- **Sem segredos no código:** o repositório tem só a chave pública do Supabase, feita para ficar no site; tokens e chaves secretas nunca são gravados.
+- **Sem injeção de código na página:** apelidos, chat e ranking são exibidos como texto, nunca como HTML.
+- **Multijogador (o anfitrião é a autoridade):** cada mensagem de um convidado é conferida. Números inválidos e mensagens grandes demais são descartados. Os disparos respeitam a cadência e o pente de cada arma, e só valem com as armas do equipamento do convidado (ou com a arma pesada que ele pegou). O deslocamento é limitado à velocidade máxima de corrida, sem teletransporte, e as trocas de armas aceitam só armas existentes, cada uma na sua categoria.
+- **Nomes e chat:** o nome de quem entra na sala passa pelo mesmo filtro do apelido (um nome recusado vira "Jogador N"); no chat, palavras ofensivas viram asteriscos, e cada convidado envia no máximo uma mensagem por segundo (cinco a cada dez segundos).
+- **Ranking:** o servidor valida cada envio (ver *Níveis e ranking TOP 100*): limite por partida, no máximo 120 pontos por segundo medidos pelo relógio do servidor, 60.000 pontos por dia por jogador, 60 jogadores novos por hora, apelidos ofensivos recusados e o registro de cada aparelho protegido por um segredo próprio.
+- **Publicação:** o workflow do GitHub usa a ação de checkout fixada pelo código da versão.
+
+Limites conhecidos: como o jogo roda no navegador, quem altera o próprio jogo ainda consegue, por exemplo, mirar automaticamente; o anfitrião confia na direção dos tiros informada pelos convidados. No multijogador, os aparelhos se conectam diretamente (WebRTC), então os jogadores de uma sala podem ver o endereço IP uns dos outros. O site carrega fontes do Google. Os nomes dos alunos na moldura de homenagem e o mural da turma são públicos; recomenda-se manter a autorização da escola ou dos responsáveis.
+
 ## Controles
 
 | Tecla | Ação |

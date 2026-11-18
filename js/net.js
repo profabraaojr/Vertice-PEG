@@ -5,6 +5,8 @@
 // Servidores STUN públicos só ajudam cada navegador a descobrir o próprio endereço.
 
 const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+import { safeName } from './profiles.js';
+
 export const MAX_GUESTS = 7; // sala com até 8 jogadores (2 times de 4)
 const ROOM_PREFIX = 'vertice-peg-sala-';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem letras e números parecidos (O/0, I/1)
@@ -137,9 +139,13 @@ export class Net {
   setupChannel(ch, peerId, kind, peer) {
     ch.onmessage = (e) => {
       let msg;
+      // mensagens grandes demais ou malformadas são descartadas
+      if (typeof e.data !== 'string' || e.data.length > 24000) return;
       try { msg = JSON.parse(e.data); } catch (err) { return; }
+      if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
       if (this.role === 'host' && msg.t === 'hello') {
-        peer.name = String(msg.name || `Jogador ${peerId + 1}`).slice(0, 18);
+        // o nome passa pelo mesmo filtro do apelido (tamanho, caracteres e palavrões)
+        peer.name = safeName(msg.name, `Jogador ${peerId + 1}`);
         peer.loadout = msg.loadout;
         peer.look = msg.look || null;
         peer.open = true;
