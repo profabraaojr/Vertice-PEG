@@ -183,7 +183,7 @@ Os recordes dos desafios ficam salvos no aparelho.
 - apelido de 2 a 16 caracteres (letras, números, espaço, ponto, hífen e sublinhado); palavrões e ofensas comuns são recusados, porque o apelido aparece para os outros jogadores;
 - tom de pele (7 opções), cor dos olhos (6), estilo de cabelo (8) e cor do cabelo (6);
 - camuflagem da farda (6: mata, deserto, urbano, digital, tigrado e noturno);
-- **cabeça:** nenhum, capacete tático (com trilhos e suporte para visão noturna), capacete antidistúrbio (com viseira e proteção de nuca), capacete clássico ou capuz de fleece com gola alta;
+- **cabeça:** nenhum, capacete tático (corte alto, trilhos laterais e suporte para visão noturna), capacete antidistúrbio (cobre as orelhas, com viseira e proteção de nuca), capacete clássico (aba em volta) ou capuz de fleece com gola alta; os capacetes contornam o formato da cabeça e encaixam sobre a balaclava e as máscaras;
 - **rosto:** nenhum, balaclava, máscara de tela ou máscara de gás (com dois filtros laterais e válvula central);
 - **cor do equipamento** (5: preto, azul-marinho, cinza, verde-oliva e areia);
 - **sigla SWAT** opcional no colete (costas e peito) e, com o capacete antidistúrbio, na viseira.

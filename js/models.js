@@ -36,9 +36,6 @@ function cyl(parent, r, len, x, y, z, mat) {
 
 
 // geometrias e materiais do equipamento de cabeça
-const domeGeo = new THREE.SphereGeometry(0.15, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2);
-const brimGeo = new THREE.CylinderGeometry(0.168, 0.172, 0.012, 24);
-const visorGeo = new THREE.CylinderGeometry(0.158, 0.158, 0.17, 22, 1, true, Math.PI - 1.15, 2.3);
 let meshM = null;
 function meshMat() {
   if (meshM) return meshM;
@@ -225,13 +222,6 @@ export class CharacterModel {
     const black = stdMat(0x121315, 0.7, 0.1);
     const rubber = stdMat(0x0d0e0f, 0.85, 0);
     const glass = stdMat(0x24323c, 0.08, 0.7, { transparent: true, opacity: 0.42 });
-    const dome = (sx, sy, sz, y, mat) => {
-      const m = new THREE.Mesh(domeGeo, mat);
-      m.scale.set(sx, sy, sz);
-      m.position.set(0, y, 0.006);
-      h.add(m);
-      return m;
-    };
     // ---------- rosto
     if (face === 'balaclava') box(h, 0.238, 0.272, 0.258, 0, 0, 0, cloth);
     if (face === 'tela') {
@@ -256,36 +246,53 @@ export class CharacterModel {
       box(h, 0.245, 0.024, 0.02, 0, 0.04, 0.124, rubber); // tirante
     }
     // ---------- cabeça
+    // Os capacetes contornam a cabeça (caixa de 0,22 × 0,25 × 0,24 m) em placas, como o capuz:
+    // topo, laterais, nuca e testa, com folga para caber sobre uma balaclava.
+    const shell = (top, sideH, sideY, backH, backY, mat, sideZ = 0.25) => {
+      box(h, 0.29, 0.04, 0.3, 0, top, 0.002, mat); // topo
+      box(h, 0.25, 0.022, 0.26, 0, top + 0.03, 0.002, mat); // abaulado superior
+      for (const sx of [-1, 1]) box(h, 0.024, sideH, sideZ, sx * 0.133, sideY, 0.004, mat); // laterais
+      box(h, 0.29, backH, 0.024, 0, backY, 0.139, mat); // nuca
+    };
     if (head === 'tatico') {
-      dome(0.86, 0.74, 0.93, 0.045, hard);
+      // corte alto (orelhas livres), trilhos laterais, suporte frontal de visão noturna e jugular
+      shell(0.157, 0.1, 0.1, 0.13, 0.085, hard, 0.24);
+      box(h, 0.29, 0.034, 0.016, 0, 0.12, -0.138, hard); // aba da testa
       for (const sx of [-1, 1]) {
-        box(h, 0.012, 0.03, 0.15, sx * 0.13, 0.07, 0.0, black); // trilhos laterais
-        box(h, 0.01, 0.12, 0.012, sx * 0.116, -0.055, -0.02, black); // jugular
+        box(h, 0.012, 0.026, 0.17, sx * 0.151, 0.1, 0.0, black); // trilho lateral
+        for (const z of [-0.05, 0.0, 0.05]) box(h, 0.014, 0.008, 0.012, sx * 0.152, 0.1, z, stdMat(0x2a2b2e, 0.5, 0.4)); // dentes do trilho
+        box(h, 0.03, 0.05, 0.05, sx * 0.124, 0.02, 0.0, black); // almofada sobre a orelha
+        box(h, 0.01, 0.13, 0.012, sx * 0.118, -0.05, -0.04, black); // jugular
       }
-      box(h, 0.055, 0.042, 0.022, 0, 0.115, -0.135, black); // suporte para óculos de visão noturna
-      box(h, 0.08, 0.035, 0.07, 0, 0.165, 0.01, stdMat(lc.gear, 0.95, 0)); // velcro superior
+      box(h, 0.07, 0.05, 0.022, 0, 0.13, -0.15, black); // suporte de visão noturna
+      box(h, 0.04, 0.02, 0.014, 0, 0.098, -0.158, stdMat(0x2a2b2e, 0.5, 0.4));
+      box(h, 0.1, 0.006, 0.08, 0, 0.196, 0.01, stdMat(lc.gear, 0.95, 0)); // velcro do topo
+      box(h, 0.12, 0.05, 0.006, 0, 0.11, 0.152, stdMat(lc.gear, 0.95, 0)); // bolsa de contrapeso na nuca
     }
     if (head === 'classico') {
-      dome(0.95, 0.8, 1.02, 0.04, hard);
-      const brim = new THREE.Mesh(brimGeo, hard);
-      brim.position.set(0, 0.045, 0.006);
-      brim.scale.set(1, 1, 1.08);
-      h.add(brim);
-      for (const sx of [-1, 1]) box(h, 0.01, 0.13, 0.012, sx * 0.118, -0.04, -0.01, black);
-      box(h, 0.015, 0.015, 0.008, 0, 0.13, -0.15, stdMat(0x2a2b2d, 0.4, 0.8)); // rebite
+      // casco único com aba saliente em toda a volta, jugular e rebite frontal
+      shell(0.155, 0.11, 0.095, 0.12, 0.09, hard, 0.27);
+      box(h, 0.29, 0.03, 0.016, 0, 0.115, -0.141, hard); // frente
+      box(h, 0.33, 0.012, 0.34, 0, 0.068, 0.002, hard); // aba
+      for (const sx of [-1, 1]) box(h, 0.01, 0.14, 0.012, sx * 0.12, -0.04, -0.01, stdMat(0x4a3b2a, 0.8, 0)); // jugular de lona
+      box(h, 0.016, 0.016, 0.006, 0, 0.13, -0.152, stdMat(0x2a2b2d, 0.4, 0.8)); // rebite
     }
     if (head === 'antidist') {
-      dome(0.98, 0.95, 1.05, 0.05, hard);
-      box(h, 0.25, 0.1, 0.03, 0, -0.08, 0.14, hard); // proteção da nuca
-      const visor = new THREE.Mesh(visorGeo, glass);
-      visor.position.set(0, -0.005, 0.0);
-      h.add(visor);
-      for (const sx of [-1, 1]) cyl(h, 0.022, 0.02, sx * 0.16, 0.07, -0.02, black).rotation.y = Math.PI / 2; // dobradiças
-      box(h, 0.26, 0.022, 0.03, 0, 0.088, -0.15, black); // aba sobre a viseira
+      // cobertura total (orelhas e nuca), aba sobre a viseira, viseira transparente e dobradiças
+      shell(0.16, 0.22, 0.03, 0.22, 0.03, hard, 0.27);
+      box(h, 0.29, 0.04, 0.02, 0, 0.12, -0.142, hard); // testa
+      const neck = box(h, 0.27, 0.11, 0.024, 0, -0.105, 0.158, hard); // proteção da nuca
+      neck.rotation.x = 0.3;
+      box(h, 0.3, 0.02, 0.05, 0, 0.098, -0.16, black); // aba sobre a viseira
+      box(h, 0.27, 0.18, 0.008, 0, -0.005, -0.168, glass); // viseira
+      for (const sx of [-1, 1]) {
+        box(h, 0.008, 0.18, 0.03, sx * 0.135, -0.005, -0.152, glass); // laterais da viseira
+        cyl(h, 0.022, 0.02, sx * 0.153, 0.07, -0.11, black).rotation.y = Math.PI / 2; // dobradiça
+      }
       if (look.swat) {
-        const t = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.045), swatMat('S.W.A.T.'));
-        t.position.set(0, 0.135, -0.155);
-        t.rotation.set(0.35, Math.PI, 0); // para a frente, inclinado com o casco
+        const t = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.05), swatMat('S.W.A.T.'));
+        t.position.set(0, 0.165, -0.149);
+        t.rotation.y = Math.PI; // para a frente (-z)
         h.add(t);
       }
     }
