@@ -63,7 +63,10 @@ export function pointsFor(r) {
 async function rpc(name, body) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+    // chave legada (anon, um JWT) vai também no Authorization; a chave nova (sb_publishable_…) só no apikey
+    headers: SUPABASE_ANON_KEY.startsWith('sb_')
+      ? { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }
+      : { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),
   });
   const text = await res.text();
