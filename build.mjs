@@ -16,6 +16,8 @@ const css = fs.readFileSync('css/style.css', 'utf8');
 let html = fs.readFileSync('index.html', 'utf8');
 html = html.replace('<link rel="stylesheet" href="css/style.css">', () => `<style>\n${css}\n</style>`);
 html = html.replace(/\s*<script type="importmap">[\s\S]*?<\/script>/, '');
+// o arquivo único usa scripts embutidos: a política de segurança do site (CSP) não se aplica a ele
+html = html.replace(/\s*<!-- política de segurança de conteúdo[^>]*-->\s*<meta http-equiv="Content-Security-Policy"[^>]*>/, '');
 html = html.replace('<script type="module" src="js/main.js"></script>', () => `<script>\n${js}\n</script>`);
 // biblioteca de salas (PeerJS) embutida para o arquivo único funcionar sem os outros arquivos
 const peer = fs.readFileSync('vendor/peerjs.min.js', 'utf8').replace(/<\/script/gi, '<\\/script');

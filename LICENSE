@@ -1,0 +1,49 @@
+MIT License
+
+Copyright (c) 2026 Abraão Junio de Souza Costa
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+EXCEÇÕES — CONTEÚDO NÃO COBERTO POR ESTA LICENÇA / EXCEPTIONS — NOT LICENSED
+--------------------------------------------------------------------------------
+
+A licença MIT acima vale para o código-fonte deste repositório (js/, css/,
+index.html, sw.js, build.mjs, supabase/ e arquivos de configuração), inclusive
+os modelos, texturas e sons gerados por código.
+
+Os itens abaixo NÃO são licenciados e não podem ser copiados, modificados,
+redistribuídos nem reutilizados fora deste projeto sem autorização escrita do
+titular. Eles envolvem direito de imagem e dados pessoais (Lei 13.709/2018, LGPD):
+
+  - assets/professor.jpg (fotografia, nome e formação de Abraão Junio de Souza
+    Costa, também embutidos em dist/vertice.html);
+  - assets/mural-turma.jpg (fotografia da turma, também embutida em
+    dist/vertice.html);
+  - os nomes dos alunos homenageados em js/homage.js.
+
+O nome "VÉRTICE" e a identidade visual do jogo também não são licenciados
+(veja TRADEMARKS.md).
+
+Bibliotecas de terceiros em vendor/ mantêm as próprias licenças
+(veja THIRD_PARTY_NOTICES.md).
+
+The MIT license above applies to the source code only. The photographs, names
+and personal data listed above, and the "VÉRTICE" name and visual identity, are
+NOT licensed and may not be reused without written permission.

@@ -28,6 +28,15 @@ create table if not exists public.ranking (
 alter table public.ranking add column if not exists day date not null default current_date;
 alter table public.ranking add column if not exists day_score bigint not null default 0;
 
+-- jogadores bloqueados pela moderação (ver "Moderação" no fim do arquivo)
+create table if not exists public.ranking_ban (
+  player_id  uuid primary key,
+  reason     text,
+  created_at timestamptz not null default now()
+);
+alter table public.ranking_ban enable row level security;
+revoke all on public.ranking_ban from anon, authenticated;
+
 alter table public.ranking enable row level security;
 -- sem políticas de acesso: leitura e escrita diretas ficam bloqueadas para anon e authenticated
 revoke all on public.ranking from anon, authenticated;
@@ -44,7 +53,7 @@ returns table(pos bigint, nickname text, score bigint, level integer, matches in
 language sql stable security definer set search_path = public as $$
   select row_number() over (order by r.score desc, r.updated_at asc), r.nickname, r.score, public.vertice_level(r.score), r.matches
   from public.ranking r
-  where r.score > 0
+  where r.score > 0 and not exists (select 1 from public.ranking_ban b where b.player_id = r.player_id)
   order by r.score desc, r.updated_at asc
   limit 100
 $$;
@@ -80,6 +89,7 @@ begin
   if p_seconds is null or p_seconds < 10 or p_points > p_seconds * 120 then raise exception 'pontuação incompatível com a duração'; end if;
   if char_length(v_nick) < 2 or char_length(v_nick) > 16 or v_nick !~ '^[[:alnum:] ._-]+$' then raise exception 'apelido inválido'; end if;
   if public.vertice_bad_nick(v_nick) then raise exception 'apelido não permitido'; end if;
+  if exists (select 1 from public.ranking_ban b where b.player_id = p_player) then raise exception 'jogador bloqueado no ranking'; end if;
 
   select * into v_row from public.ranking r where r.player_id = p_player for update;
   if found then
@@ -120,3 +130,17 @@ revoke all on function public.ranking_delete(uuid, uuid) from public;
 grant execute on function public.ranking_top100() to anon, authenticated;
 grant execute on function public.ranking_submit(uuid, uuid, text, integer, text, integer) to anon, authenticated;
 grant execute on function public.ranking_delete(uuid, uuid) to anon, authenticated;
+
+-- Moderação (executar no SQL Editor quando necessário):
+--
+--   -- ver os registros
+--   select player_id, nickname, score, matches, day_score, created_at, updated_at from public.ranking order by score desc;
+--
+--   -- bloquear e retirar um jogador do ranking (pelo apelido)
+--   insert into public.ranking_ban(player_id, reason)
+--     select player_id, 'pontuação forjada' from public.ranking where nickname = 'APELIDO'
+--     on conflict do nothing;
+--   delete from public.ranking where nickname = 'APELIDO';
+--
+--   -- desbloquear
+--   delete from public.ranking_ban where player_id = 'ID';
