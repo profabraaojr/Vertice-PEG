@@ -1,16 +1,11 @@
-// Perfis dos jogadores: homenagem aos alunos, com aparência personalizável.
-// Cada perfil guarda tom de pele, cor dos olhos, estilo e cor de cabelo e a camuflagem da farda.
+// Perfil do jogador: cada pessoa cria o seu (apelido e aparência), salvo só neste aparelho.
+// A aparência guarda tom de pele, cor dos olhos, estilo e cor de cabelo e a camuflagem da farda.
 // O modelo do uniforme (colete, cinto, coturnos, ombreiras da equipe) é sempre o padrão.
+// A homenagem à turma fica em js/homage.js (só os nomes, na moldura de abertura).
 import * as THREE from 'three';
 import { settings, saveSettings } from './settings.js';
 import { mulberry32 } from './utils.js';
 
-export const SCHOOL = 'Escola Estadual Cívico Militar Joaquim Nunes Rocha';
-export const CLASSES = '1º, 2º e 3º ano PEG';
-export const STUDENTS = [
-  'Ana', 'Carlos', 'Damarys', 'Daniel', 'David', 'Enzo', 'Eros', 'Gustavo Correa', 'Gustavo Luiz', 'Gustavo Hideki',
-  'Jhon', 'João', 'Kayleb', 'Larissa', 'Luiz', 'Matheus', 'Rafael', 'Renato', 'Tamyris',
-];
 
 export const SKINS = [
   { id: 's1', name: 'Muito claro', hex: 0xf6dcc6 },
@@ -82,24 +77,57 @@ export function sanitizeLook(look, name = '') {
   };
 }
 
-export function getLook(name) {
-  return sanitizeLook((settings.looks || {})[name], name);
+// ---------- apelido ----------
+// 2 a 16 caracteres: letras (com acento), números, espaço, ponto, hífen e sublinhado.
+// Palavrões e ofensas comuns são recusados (o apelido aparece para outros jogadores e no ranking).
+const BLOCKED = ['porra', 'caralho', 'merda', 'buceta', 'boceta', 'filhodaputa', 'putaria', 'fdp', 'viado', 'arrombad', 'cuzao', 'cuzão', 'piroca', 'xoxota', 'foder', 'fuder', 'fodase', 'vsf', 'vtnc', 'otario', 'otário', 'babaca', 'retardad', 'nazi', 'hitler', 'fuck', 'shit', 'bitch', 'nigg', 'pussy'];
+const fold = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[0@]/g, 'o').replace(/[1!]/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/[5$]/g, 's').replace(/[^a-z]/g, '');
+
+export function cleanNickname(raw) {
+  return String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 16);
 }
 
-export function setLook(name, patch) {
-  if (!settings.looks) settings.looks = {};
-  settings.looks[name] = { ...getLook(name), ...patch };
-  saveSettings();
-  return getLook(name);
+// Devolve '' se o apelido é aceito, ou o motivo da recusa.
+export function nicknameProblem(raw) {
+  const n = cleanNickname(raw);
+  if (n.length < 2) return 'Use pelo menos 2 caracteres.';
+  if (!/^[\p{L}\p{N} ._-]+$/u.test(n)) return 'Use só letras, números, espaço, ponto, hífen ou sublinhado.';
+  const f = fold(n);
+  if (BLOCKED.some((w) => f.includes(fold(w)))) return 'Esse apelido não é permitido. Escolha outro.';
+  return '';
 }
 
-export const activeProfile = () => (STUDENTS.includes(settings.profile) ? settings.profile : '');
-export const activeLook = () => (activeProfile() ? getLook(activeProfile()) : null);
+export const activeProfile = () => (settings.nickname && !nicknameProblem(settings.nickname) ? cleanNickname(settings.nickname) : '');
 export const playerName = () => activeProfile() || 'Você';
+export const getLook = () => sanitizeLook(settings.look, activeProfile() || 'Jogador');
+export const activeLook = () => (activeProfile() ? getLook() : null);
 
-export function setActiveProfile(name) {
-  settings.profile = STUDENTS.includes(name) ? name : '';
+export function setLook(patch) {
+  settings.look = { ...getLook(), ...patch };
   saveSettings();
+  return getLook();
+}
+
+export function saveProfile(nickname, look) {
+  settings.nickname = cleanNickname(nickname);
+  settings.look = sanitizeLook(look, settings.nickname);
+  saveSettings();
+}
+
+export function deleteProfile() {
+  settings.nickname = '';
+  settings.look = null;
+  saveSettings();
+}
+
+// Perfis antigos (nomes da turma, de versões anteriores) não são mais usados: apaga do aparelho.
+const OLD = ['Ana', 'Carlos', 'Damarys', 'Daniel', 'David', 'Enzo', 'Eros', 'Gustavo Correa', 'Gustavo Luiz', 'Gustavo Hideki', 'Jhon', 'João', 'Kayleb', 'Larissa', 'Luiz', 'Matheus', 'Rafael', 'Renato', 'Tamyris'];
+export function migrateProfiles() {
+  let changed = false;
+  if (settings.looks) { delete settings.looks; changed = true; }
+  if (settings.profile) { delete settings.profile; changed = true; }
+  if (OLD.includes(cleanNickname(settings.nickname))) { settings.nickname = ''; settings.look = null; changed = true; }
+  if (changed) saveSettings();
 }
 
 export const lookColors = (look) => ({

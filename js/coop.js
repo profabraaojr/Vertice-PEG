@@ -7,7 +7,7 @@ import { Player } from './player.js';
 import { TEAMS, WEAPONS } from './config.js';
 import { settings } from './settings.js';
 import { rayAABB } from './utils.js';
-import { sanitizeLook, activeLook, playerName, STUDENTS, getLook } from './profiles.js';
+import { sanitizeLook, activeLook, playerName, nicknameProblem, cleanNickname } from './profiles.js';
 
 const SNAP_DT = 0.05; // 20 Hz
 const INPUT_DT = 1 / 30;
@@ -41,7 +41,8 @@ export function installCoop(Game) {
   // ================= ANFITRIÃO =================
   P.createRemote = function (peer, team) {
     const color = TEAMS[team] ? TEAMS[team].color : 0x6dff9e;
-    const r = new Proxy({ id: 100 + peer.id, name: peer.name, team, color, peerId: peer.id, look: peer.look ? sanitizeLook(peer.look, peer.name) : null });
+    const pname = nicknameProblem(peer.name) ? `Jogador ${peer.id}` : cleanNickname(peer.name); // apelido recusado vira genérico
+    const r = new Proxy({ id: 100 + peer.id, name: pname, team, color, peerId: peer.id, look: peer.look ? sanitizeLook(peer.look, peer.name) : null });
     r.look = peer.look ? sanitizeLook(peer.look, peer.name) : null;
     const lo = peer.loadout || {};
     r.setLoadout(WEAPONS[lo.primary] ? lo.primary : 'tempest', WEAPONS[lo.secondary] ? lo.secondary : 'vp9', this.config.mode === 'training', lo.melee);
@@ -55,7 +56,7 @@ export function installCoop(Game) {
     return this.combatants.map((c) => ({
       id: c.id, name: c.isPlayer ? this.net.myName : c.name, team: c.team, color: c.color,
       peer: c.isRemote ? c.peerId : null, kind: c.isPlayer ? 'host' : c.isRemote ? 'guest' : 'bot',
-      look: c.isPlayer ? activeLook() : c.isRemote ? c.look : (STUDENTS.includes(c.name) ? getLook(c.name) : null),
+      look: c.isPlayer ? activeLook() : c.look || null,
     }));
   };
 

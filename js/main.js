@@ -20,7 +20,8 @@ import { Menu } from './menu.js';
 import { Net } from './net.js';
 import { initGunEnvironment } from './guns.js';
 import { WeaponPreview } from './preview.js';
-import { activeLook } from './profiles.js';
+import { activeLook, migrateProfiles } from './profiles.js';
+import { showHomageFrame } from './homage.js';
 
 class App {
   constructor() {
@@ -82,6 +83,7 @@ class App {
       if (this.menu.current === 'screen-coop') this.lobby.status('A sala foi encerrada pelo anfitrião ou a conexão caiu.', true);
     };
     this.net.onPeersChange = () => this.lobby.syncPeers();
+    migrateProfiles(); // perfis antigos com nomes da turma são apagados do aparelho
     this.menu = new Menu(this);
     watchInputKind(this, () => settings.controlMode || 'auto');
     this.lobby = new Lobby(this);
@@ -150,6 +152,7 @@ class App {
     this.last = performance.now();
     this.renderer.setAnimationLoop((t) => this.frame(t));
     window.__vertice = this; // útil para depuração no console
+    showHomageFrame(); // moldura com os nomes da turma, na abertura
   }
 
   // Perfil ativo mudou: atualiza mangas da arma em primeira pessoa e o rótulo do menu.

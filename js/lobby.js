@@ -5,7 +5,7 @@
 import { settings, saveSettings } from './settings.js';
 import { TEAMS } from './config.js';
 import { MAPS, MAP_IDS } from './map.js';
-import { activeProfile, activeLook } from './profiles.js';
+import { activeProfile, activeLook, nicknameProblem, cleanNickname } from './profiles.js';
 import { normalizeCode } from './net.js';
 
 const $ = (id) => document.getElementById(id);
@@ -31,7 +31,12 @@ export class Lobby {
   bind() {
     const nameEl = $('mp-name');
     nameEl.value = settings.nickname || activeProfile() || '';
-    nameEl.addEventListener('input', () => { settings.nickname = nameEl.value.trim().slice(0, 18); saveSettings(); });
+    // o nome na sala é o apelido do perfil; só é salvo se passar pela mesma validação
+    nameEl.addEventListener('input', () => {
+      const ok = !nicknameProblem(nameEl.value);
+      nameEl.classList.toggle('bad', !!nameEl.value.trim() && !ok);
+      if (ok) { settings.nickname = cleanNickname(nameEl.value); saveSettings(); this.app.onProfileChange(); }
+    });
     const code = $('mp-code');
     code.addEventListener('input', () => { code.value = normalizeCode(code.value); });
     code.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('mp-join').click(); });
@@ -93,7 +98,7 @@ export class Lobby {
     $('coop-copy-answer').addEventListener('click', () => this.copy($('coop-answer-out').value));
   }
 
-  name() { return ($('mp-name').value.trim() || activeProfile() || 'Jogador').slice(0, 18); }
+  name() { const v = $('mp-name').value; return !nicknameProblem(v) ? cleanNickname(v) : activeProfile() || 'Jogador'; }
 
   async busy(btn, fn) {
     btn.disabled = true;

@@ -11,7 +11,7 @@ import { settings } from './settings.js';
 import { cellToWorld } from './map.js';
 import { DEG, rand, pick, shuffle, clamp, lerp, damp, rayAABB } from './utils.js';
 import { installCoop, EMPTY_INPUT } from './coop.js';
-import { STUDENTS, getLook, playerName, activeProfile } from './profiles.js';
+import { defaultLook, playerName, activeProfile } from './profiles.js';
 
 const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
@@ -149,10 +149,10 @@ export class Game {
       return;
     }
 
-    // os bots levam os nomes (e a aparência salva) dos alunos que não estão jogando
+    // os bots usam codinomes (bichos do Brasil); se faltarem, ganham número ("Lobo 2")
     const taken = new Set([activeProfile(), ...guests.map((g) => g.name)]);
-    let names = shuffle(STUDENTS.filter((n) => !taken.has(n)));
-    if (names.length < this.config.bots) names = names.concat(shuffle(BOT_NAMES.slice()));
+    let names = shuffle(BOT_NAMES.filter((n) => !taken.has(n)));
+    for (let k = 2; names.length < this.config.bots; k++) names = names.concat(shuffle(BOT_NAMES.map((n) => `${n} ${k}`)));
     let aBots;
     if (room) {
       // bots definidos pela sala: os primeiros completam a Vanguarda, os demais a Sentinela
@@ -169,7 +169,9 @@ export class Game {
       else if (mode === 'training') { team = 'B'; color = TEAMS.B.color; }
       else { team = `F${i}`; color = FFA_COLORS[(i + 1) % FFA_COLORS.length]; }
       const bname = names[i % names.length];
-      const bot = new Bot({ id: i + 1, name: bname, team, color, look: STUDENTS.includes(bname) ? getLook(bname) : null }, this.config.difficulty);
+      const look = defaultLook(bname); // aparência variada, sempre a mesma para o mesmo codinome
+      const bot = new Bot({ id: i + 1, name: bname, team, color, look }, this.config.difficulty);
+      bot.look = look;
       bot.setLoadout(weightedPrimary(), pick(SECONDARY_IDS), mode === 'training', pick(MELEE_IDS));
       bot.passive = mode === 'training' && !this.config.botsShoot;
       this.scene.add(bot.model.root);

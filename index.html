@@ -192,7 +192,7 @@
         <div id="mp-entry">
           <header class="panel-head"><h2>Multijogador</h2><p>Crie uma sala, envie o código ou o link aos colegas e joguem juntos: até 8 jogadores em dois times de 4, uns contra os outros (PvP) ou lado a lado contra bots (cooperativo).</p></header>
           <div class="mp-entry">
-            <label class="opt"><span>Seu nome na partida</span><input type="text" id="mp-name" maxlength="18" placeholder="Seu nome" autocomplete="off"></label>
+            <label class="opt"><span>Seu nome na partida</span><input type="text" id="mp-name" maxlength="16" placeholder="Seu nome" autocomplete="off"></label>
             <div class="mp-cards">
               <div class="mp-card">
                 <h3>Criar sala</h3>
@@ -307,11 +307,12 @@
     <!-- perfis -->
     <section class="screen" id="screen-profile">
       <div class="panel wide">
-        <header class="panel-head"><h2>Perfis</h2><p id="profile-homage"></p></header>
+        <header class="panel-head"><h2>Perfil</h2><p>Crie seu perfil: escolha um apelido e personalize a aparência. Ele fica salvo só neste aparelho.</p></header>
         <div class="profile">
           <div class="pf-list">
-            <h4>Escolha seu perfil</h4>
-            <div class="pf-grid" id="pf-grid"></div>
+            <h4>Apelido</h4>
+            <input id="pf-nick" class="pf-nick" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Ex.: Falcão Azul">
+            <p class="pf-nick-msg" id="pf-nick-msg"></p>
           </div>
           <div class="pf-editor">
             <div class="pf-view">
@@ -335,8 +336,9 @@
         <footer class="panel-foot">
           <button class="btn" data-action="back">Voltar</button>
           <button class="btn" id="pf-random">Aparência aleatória</button>
+          <button class="btn hidden" id="pf-delete">Apagar perfil</button>
           <div class="grow"></div>
-          <button class="btn primary" id="pf-use">Usar este perfil</button>
+          <button class="btn primary" id="pf-use">Criar perfil</button>
         </footer>
       </div>
     </section>

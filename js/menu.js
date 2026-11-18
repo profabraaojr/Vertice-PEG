@@ -7,7 +7,8 @@ import { pwa, isStandalone, platform, promptInstall } from './pwa.js';
 import { CAMPAIGN, missionById, storyProgress } from './story.js';
 import { isTouchDevice } from './touch.js';
 import { trainingBest } from './training.js';
-import { STUDENTS, SCHOOL, CLASSES, SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, getLook, setLook, defaultLook, activeProfile, activeLook, setActiveProfile, camoCanvas, lookColors } from './profiles.js';
+import { SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, getLook, defaultLook, sanitizeLook, activeProfile, camoCanvas, cleanNickname, nicknameProblem, saveProfile, deleteProfile } from './profiles.js';
+import { SCHOOL, CLASSES } from './homage.js';
 
 const $ = (id) => document.getElementById(id);
 const hex = (c) => `#${c.toString(16).padStart(6, '0')}`;
@@ -375,24 +376,12 @@ export class Menu {
     this.show('screen-install');
   }
 
-  // ---------- perfis ----------
+  // ---------- perfil ----------
+  // Cada pessoa cria o próprio perfil (apelido e aparência), salvo só neste aparelho.
+  // O rascunho (pfDraft) só vale depois de "Salvar perfil".
   initProfiles() {
-    const homage = `Homenagem aos alunos da ${SCHOOL} · ${CLASSES}`;
-    $('homage').textContent = homage;
-    $('profile-homage').textContent = `${homage}. Escolha seu nome e personalize a aparência.`;
-    this.pfSel = activeProfile() || STUDENTS[0];
+    $('homage').textContent = `Homenagem aos alunos da ${SCHOOL} · ${CLASSES}`;
     this.pfYaw = 0.5;
-    const grid = $('pf-grid');
-    STUDENTS.forEach((name) => {
-      const b = document.createElement('button');
-      b.className = 'pf-card';
-      b.dataset.name = name;
-      b.innerHTML = '<i></i><span></span>';
-      b.querySelector('span').textContent = name;
-      b.querySelector('i').textContent = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-      b.addEventListener('click', () => { this.app.audio.uiClick(); this.pfSel = name; this.renderProfiles(); });
-      grid.appendChild(b);
-    });
     const hex = (h) => `#${h.toString(16).padStart(6, '0')}`;
     const swatches = (box, list, key) => list.forEach((o) => {
       const b = document.createElement('button');
@@ -417,8 +406,7 @@ export class Menu {
       const b = document.createElement('button');
       b.dataset.v = o.id;
       b.title = o.name;
-      const c = camoCanvas(o.id, 64);
-      b.appendChild(c);
+      b.appendChild(camoCanvas(o.id, 64));
       const t = document.createElement('span');
       t.textContent = o.name;
       b.appendChild(t);
@@ -429,13 +417,24 @@ export class Menu {
       const r = (list) => list[Math.floor(Math.random() * list.length)].id;
       this.pfSet({ skin: r(SKINS), eyes: r(EYES), hair: r(HAIRS), hairColor: r(HAIR_COLORS), camo: r(CAMOS) });
     });
+    const nick = $('pf-nick');
+    nick.addEventListener('input', () => { this.pfDraftName = nick.value; this.renderProfiles(false); });
     $('pf-use').addEventListener('click', () => {
-      setActiveProfile(this.pfSel);
-      settings.nickname = this.pfSel;
-      saveSettings();
+      const problem = nicknameProblem(this.pfDraftName);
+      if (problem) { this.renderProfiles(false); nick.focus(); return; }
+      saveProfile(this.pfDraftName, this.pfDraft);
+      this.app.audio.uiClick();
       this.app.onProfileChange();
-      this.app.toast(`Perfil de ${this.pfSel} ativado.`);
+      this.app.toast(`Perfil de ${activeProfile()} salvo neste aparelho.`);
       this.renderProfiles();
+    });
+    $('pf-delete').addEventListener('click', () => {
+      if (!activeProfile()) return;
+      if (!window.confirm('Apagar o perfil deste aparelho? O apelido e a aparência serão removidos.')) return;
+      deleteProfile();
+      this.app.onProfileChange();
+      this.app.toast('Perfil apagado.');
+      this.openProfiles();
     });
     const cv = $('pf-body');
     cv.addEventListener('pointerdown', (e) => { this.pfDrag = { x: e.clientX, yaw: this.pfYaw }; cv.setPointerCapture(e.pointerId); });
@@ -448,36 +447,38 @@ export class Menu {
 
   pfSet(patch) {
     this.app.audio.uiClick();
-    setLook(this.pfSel, patch);
-    if (this.pfSel === activeProfile()) this.app.onProfileChange();
-    this.renderProfiles();
+    this.pfDraft = sanitizeLook({ ...this.pfDraft, ...patch });
+    this.renderProfiles(false);
   }
 
   openProfiles() {
-    this.pfSel = activeProfile() || this.pfSel || STUDENTS[0];
+    const name = activeProfile();
+    this.pfDraftName = name;
+    this.pfDraft = name ? getLook() : defaultLook(String(Math.random()));
+    $('pf-nick').value = name;
     this.show('screen-profile');
     requestAnimationFrame(() => this.renderProfiles());
   }
 
-  renderProfiles() {
-    const look = getLook(this.pfSel);
+  // saved = false: houve mudança ainda não salva
+  renderProfiles(saved = true) {
+    const look = this.pfDraft || getLook();
     const active = activeProfile();
-    const lc = lookColors(look);
-    document.querySelectorAll('.pf-card').forEach((c) => {
-      const n = c.dataset.name;
-      c.classList.toggle('sel', n === this.pfSel);
-      c.classList.toggle('active', n === active);
-      c.querySelector('i').style.background = `#${lookColors(getLook(n)).skin.toString(16).padStart(6, '0')}`;
-    });
+    const name = cleanNickname(this.pfDraftName);
+    const problem = this.pfDraftName ? nicknameProblem(this.pfDraftName) : '';
     const mark = (id, v) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.v === v));
     mark('pf-skin', look.skin); mark('pf-eyes', look.eyes); mark('pf-hair', look.hair); mark('pf-haircolor', look.hairColor); mark('pf-camo', look.camo);
-    $('pf-name').textContent = this.pfSel;
-    $('pf-team').textContent = this.pfSel === active ? 'Perfil em uso · uniforme padrão' : 'Uniforme padrão da equipe';
+    $('pf-name').textContent = name || 'Seu apelido';
+    const msg = $('pf-nick-msg');
+    msg.textContent = problem || 'De 2 a 16 caracteres. Aparece para os outros jogadores e no ranking; evite usar o nome completo.';
+    msg.classList.toggle('err', !!problem);
+    const dirty = !saved || name !== active || JSON.stringify(sanitizeLook(look)) !== JSON.stringify(active ? getLook() : null);
+    $('pf-team').textContent = active ? (dirty ? 'Alterações ainda não salvas' : 'Perfil salvo neste aparelho') : 'Perfil ainda não criado';
     const use = $('pf-use');
-    use.textContent = this.pfSel === active ? 'Perfil em uso' : `Jogar como ${this.pfSel}`;
-    use.disabled = this.pfSel === active;
+    use.textContent = active ? 'Salvar alterações' : 'Criar perfil';
+    use.disabled = !name || !!problem || (active && !dirty);
+    $('pf-delete').classList.toggle('hidden', !active);
     this.pfDirty = true;
-    void lc;
   }
 
   tickProfile(dt) {
@@ -485,7 +486,7 @@ export class Menu {
     const body = $('pf-body'), face = $('pf-face');
     if (!body.clientWidth) return;
     if (!this.pfDrag) this.pfYaw += dt * 0.5;
-    const look = getLook(this.pfSel);
+    const look = this.pfDraft || getLook();
     const color = 0xff7a2f;
     this.app.preview.renderCharacter(look, color, body, this.pfYaw, false);
     if (this.pfDirty) { this.app.preview.renderCharacter(look, color, face, 0, true); this.pfDirty = false; }
@@ -493,7 +494,7 @@ export class Menu {
 
   updateProfileLabel() {
     const p = activeProfile();
-    $('current-profile').textContent = p ? `Perfil: ${p}` : 'Nenhum perfil escolhido · clique em Perfil';
+    $('current-profile').textContent = p ? `Perfil: ${p}` : 'Sem perfil · clique em Perfil para criar o seu';
   }
 
   // ---------- multijogador (a lógica fica em lobby.js) ----------

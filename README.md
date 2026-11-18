@@ -87,7 +87,7 @@ Navegadores recomendados: Chrome, Edge ou Firefox atualizados. Clique na tela pa
 
 ## Modo História
 
-Campanha individual do **Agente Falcão**, da unidade tática, com farda própria, contra a organização criminosa **Crakem**, liderada pelo terrorista **Vugo**. Os criminosos usam codinomes fictícios; os perfis dos alunos não aparecem como criminosos.
+Campanha individual do **Agente Falcão**, da unidade tática, com farda própria, contra a organização criminosa **Crakem**, liderada pelo terrorista **Vugo**. Os criminosos usam codinomes fictícios.
 
 | Missão | Cenário | Objetivo |
 |---|---|---|
@@ -159,18 +159,19 @@ No menu principal, **Centro de treinamento** leva a um complexo com duas áreas 
 
 Os recordes dos desafios ficam salvos no aparelho.
 
-## Perfis
+## Homenagem e perfil
 
-O jogo homenageia os alunos da Escola Estadual Cívico Militar Joaquim Nunes Rocha (1º, 2º e 3º ano PEG). Em **Perfil**, cada aluno escolhe o próprio nome entre os 19 perfis (Ana, Carlos, Damarys, Daniel, David, Enzo, Eros, Gustavo Correa, Gustavo Luiz, Gustavo Hideki, Jhon, João, Kayleb, Larissa, Luiz, Matheus, Rafael, Renato e Tamyris) e personaliza:
+**Homenagem.** O jogo homenageia os alunos da Escola Estadual Cívico Militar Joaquim Nunes Rocha (1º, 2º e 3º ano PEG). A cada abertura, uma moldura mostra a escola, as turmas e os nomes dos 19 alunos (Ana, Carlos, Damarys, Daniel, David, Enzo, Eros, Gustavo Correa, Gustavo Luiz, Gustavo Hideki, Jhon, João, Kayleb, Larissa, Luiz, Matheus, Rafael, Renato e Tamyris); um toque, clique ou tecla a fecha. O mural com a foto da turma continua nos mapas. Os nomes não são usados como perfis nem pelos bots.
 
-- tom de pele (7 opções);
-- cor dos olhos (6);
-- estilo de cabelo (8: raspado, curto, topete, cacheado, longo liso, rabo de cavalo, tranças e coque) e cor do cabelo (6);
+**Perfil.** Em **Perfil**, cada pessoa cria o próprio perfil:
+
+- apelido de 2 a 16 caracteres (letras, números, espaço, ponto, hífen e sublinhado); palavrões e ofensas comuns são recusados, porque o apelido aparece para os outros jogadores;
+- tom de pele (7 opções), cor dos olhos (6), estilo de cabelo (8) e cor do cabelo (6);
 - camuflagem da farda (6: mata, deserto, urbano, digital, tigrado e noturno).
 
-O uniforme em si (colete, cinto, coturnos, luvas e as cores da equipe) é igual para todos; a camuflagem muda só a estampa da farda e das mangas. O personagem aparece em 3D, girando, com um close do rosto. As escolhas ficam salvas no navegador.
+O uniforme em si (colete, cinto, coturnos, luvas e as cores da equipe) é igual para todos; a camuflagem muda só a estampa da farda e das mangas. O personagem aparece em 3D, girando, com um close do rosto. O perfil fica salvo só no navegador do aparelho e pode ser apagado a qualquer momento. Perfis de versões anteriores com nomes dos alunos são apagados automaticamente.
 
-O nome do perfil ativo aparece no placar e no feed de eliminações. Os bots recebem os nomes dos demais alunos, com a aparência salva para cada um. No cooperativo, a aparência de cada jogador é enviada aos outros.
+O apelido aparece no placar e no feed de eliminações e é o nome usado nas salas multijogador (um apelido recusado vira "Jogador N"). Os bots usam codinomes de bichos do Brasil (Raposa, Coruja, Jaguar…), com número quando há muitos ("Lobo 2"). No multijogador, a aparência de cada jogador é enviada aos outros.
 
 ## Mapas
 
@@ -271,7 +272,8 @@ js/guns.js          modelos detalhados das armas (perfis extrudados, materiais, 
 js/rifles.js        modelos dos rifles M82, SVD-63, Espectro e Horizonte
 js/preview.js       prévia 3D das armas no arsenal
 js/models.js        modelos dos personagens (rosto, olhos, cabelo, farda)
-js/profiles.js      perfis dos alunos, opções de aparência e camuflagens
+js/profiles.js      perfil do jogador (apelido, validação, aparência) e camuflagens
+js/homage.js        homenagem à turma: nomes e moldura de abertura
 js/touch.js         controles de toque (joystick, mira por arraste, botões) a partir do layout ativo
 js/touchlayout.js   comandos, layouts prontos, perfis, geometria e exportação dos controles de toque
 js/controleditor.js editor "Personalizar controles"

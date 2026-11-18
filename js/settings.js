@@ -31,8 +31,7 @@ const DEFAULTS = {
   loadout: { primary: 'tempest', secondary: 'vp9', melee: 'katana' },
   match: { map: 'ferrugem', mode: 'team', bots: 7, difficulty: 'soldado', timeLimit: 8, scoreLimit: 25, rounds: 5, botsShoot: true },
   nickname: '',
-  profile: '',
-  looks: {},
+  look: null,
   coop: { map: 'ferrugem', mode: 'team', bots: 6, difficulty: 'soldado', rounds: 5 },
 };
 
@@ -64,7 +63,7 @@ export function saveSettings() {
 }
 
 export function resetSettings() {
-  const keep = { loadout: settings.loadout, match: settings.match, coop: settings.coop, nickname: settings.nickname, profile: settings.profile, looks: settings.looks, touchProfiles: settings.touchProfiles };
+  const keep = { loadout: settings.loadout, match: settings.match, coop: settings.coop, nickname: settings.nickname, look: settings.look, touchProfiles: settings.touchProfiles };
   Object.assign(settings, JSON.parse(JSON.stringify(DEFAULTS)), keep);
   saveSettings();
 }
