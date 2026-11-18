@@ -47,7 +47,7 @@ class App {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoftShadowMap foi removido no three.js r18x
     this.renderer.autoClear = false;
 
     initGunEnvironment(this.renderer); // reflexos do metal das armas

@@ -4,15 +4,17 @@
   "description": "FPS tático em HTML5, CSS e JavaScript (Three.js)",
   "scripts": {
     "start": "python3 -m http.server 8000",
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "vendor:three": "esbuild node_modules/three/build/three.module.js --bundle --minify --format=esm --outfile=vendor/three.module.min.js",
+    "vendor:peerjs": "node -e \"require('fs').copyFileSync('node_modules/peerjs/dist/peerjs.min.js','vendor/peerjs.min.js')\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "esbuild": "^0.28.2",
-    "peerjs": "^1.5.4",
-    "three": "^0.160.0"
+    "peerjs": "^1.5.5",
+    "three": "^0.187.0"
   },
   "type": "module",
   "private": true
