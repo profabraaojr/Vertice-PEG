@@ -54,9 +54,22 @@ function seam(ctx, s, u, dark = 'rgba(0,0,0,0.55)', light = 'rgba(200,200,190,0.
   for (let y = 0; y < s; y += 8) ctx.fillRect(x - 0.75, y, 1.5, 5);
 }
 
-const fingerMap = (hex) => tex(`hf${hex}`, 128, (ctx, s) => {
+// vincos de dobra perto das juntas (v = 0 e v = 1 ficam nas pontas de cada falange)
+function creases(ctx, s, rng, dark = 'rgba(0,0,0,', light = 'rgba(255,255,255,') {
+  for (const [v0, v1] of [[0.03, 0.14], [0.86, 0.97]]) {
+    for (let i = 0; i < 4; i++) {
+      const y = (v0 + (v1 - v0) * (i + rng() * 0.5) / 4) * s;
+      ctx.fillStyle = `${dark}${0.22 + rng() * 0.15})`;
+      ctx.fillRect(0, y, s, 1.4);
+      ctx.fillStyle = `${light}${0.05 + rng() * 0.04})`;
+      ctx.fillRect(0, y + 1.4, s, 1);
+    }
+  }
+}
+const fingerMap = (hex) => tex(`hf${hex}`, 256, (ctx, s) => {
   const rng = mulberry32(5);
   weave(ctx, s, hex, rng);
+  creases(ctx, s, rng);
   seam(ctx, s, 0.25);
   seam(ctx, s, 0.75);
 });
@@ -65,13 +78,14 @@ const backMap = (hex) => tex(`hb${hex}`, 128, (ctx, s) => {
   weave(ctx, s, hex, rng);
 });
 // relevo: trama fina para o tecido, granulado para borracha e couro sintético
-const weaveBump = () => tex('hwb', 128, (ctx, s) => {
+const weaveBump = () => tex('hwb', 256, (ctx, s) => {
   ctx.fillStyle = '#808080';
   ctx.fillRect(0, 0, s, s);
   for (let y = 0; y < s; y += 2) for (let x = 0; x < s; x += 2) {
     ctx.fillStyle = (x + y) % 4 === 0 ? '#9a9a9a' : '#666666';
     ctx.fillRect(x, y, 2, 2);
   }
+  creases(ctx, s, mulberry32(31), 'rgba(40,40,40,', 'rgba(200,200,200,');
   seam(ctx, s, 0.25, '#3a3a3a', '#c0c0c0');
   seam(ctx, s, 0.75, '#3a3a3a', '#c0c0c0');
 }, false);
@@ -106,14 +120,23 @@ export function handMaterials(env, glove = '#34363a') {
     m.envMapIntensity = o.envMapIntensity ?? 0.3;
     return m;
   };
+  // tecido: brilho rasante ("sheen") que contorna dedos e dobras, como numa luva de verdade
+  const cloth = (o) => {
+    const m = new THREE.MeshPhysicalMaterial({ ...o, sheen: 0.6, sheenRoughness: 0.6, sheenColor: new THREE.Color(0x5e6269) });
+    m.envMap = env;
+    m.envMapIntensity = 0.3;
+    return m;
+  };
   const m = {
-    finger: std({ map: fingerMap(glove), bumpMap: weaveBump(), bumpScale: 0.9, roughness: 0.9, metalness: 0 }),
-    back: std({ map: backMap(glove), bumpMap: weaveBump(), bumpScale: 0.7, roughness: 0.9, metalness: 0 }),
+    finger: cloth({ map: fingerMap(glove), bumpMap: weaveBump(), bumpScale: 1.1, roughness: 0.88, metalness: 0 }),
+    back: cloth({ map: backMap(glove), bumpMap: weaveBump(), bumpScale: 0.8, roughness: 0.88, metalness: 0 }),
     // palma e pontas em couro sintético mais escuro e liso
     palm: std({ color: 0x2a2621, bumpMap: grainBump(), bumpScale: 0.8, roughness: 0.72, metalness: 0, envMapIntensity: 0.45 }),
     // protetores de borracha moldada nos nós dos dedos
     pad: std({ color: 0x17181a, bumpMap: grainBump(), bumpScale: 0.5, roughness: 0.55, metalness: 0, envMapIntensity: 0.6 }),
     strap: std({ map: strapMap(), roughness: 0.95, metalness: 0 }),
+    // vinco das juntas (anel fino um pouco mais escuro)
+    crease: std({ color: 0x1c1d1f, roughness: 0.95, metalness: 0 }),
   };
   matCache.set(key, m);
   return m;
@@ -185,12 +208,12 @@ function wrap(joints, len, r, sdf, o) {
     const j = joints[i];
     let a = o.min?.[i] ?? 0.04;
     j.rotation.x = a;
-    if (segTouch(j, len[i], r[i], sdf, o.slack ?? 0.0012)) continue; // já encostado
+    if (segTouch(j, len[i], r[i], sdf, o.slack ?? 0.0008)) continue; // já encostado
     const step = 0.035;
     while (a < max[i]) {
       a += step;
       j.rotation.x = a;
-      if (segTouch(j, len[i], r[i], sdf, o.slack ?? 0.0012)) { a -= step * 0.5; j.rotation.x = a; break; }
+      if (segTouch(j, len[i], r[i], sdf, o.slack ?? 0.0008)) { a -= step * 0.5; j.rotation.x = a; break; }
     }
   }
 }
@@ -249,11 +272,47 @@ export function buildHand(k, pose, mats, sleeveMat) {
     g.translate(0, 0, L / 2);
     return g;
   };
+  // falange que afina da base (r0) para a ponta (r1), um pouco mais larga que alta (dedo real),
+  // com as extremidades arredondadas; a parte de baixo (palmar) é levemente mais cheia
+  const phalanx = (r0, r1, L, seg = 14) => {
+    const body = new THREE.CylinderGeometry(r1, r0, L, seg, 3, true);
+    body.rotateX(Math.PI / 2);
+    body.translate(0, 0, L / 2);
+    const a = new THREE.SphereGeometry(r0, seg, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+    a.rotateX(-Math.PI / 2);
+    const b = new THREE.SphereGeometry(r1, seg, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    b.rotateX(Math.PI / 2);
+    b.translate(0, 0, L);
+    // achatamento dorso-palmar e volume palmar (normais suaves em cada peça)
+    for (const g of [body, a, b]) {
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const y = p.getY(i);
+        p.setX(i, p.getX(i) * 1.08);
+        p.setY(i, y < 0 ? y * 0.98 : y * 0.86);
+      }
+      g.computeVertexNormals();
+    }
+    return [body, a, b];
+  };
+
 
   // falanges; protetores nos dorsos das falanges proximais e médias; ponta reforçada
   FINGERS.forEach((f, i) => {
     fingerJoints[i].forEach((j, n) => {
-      put(capsule(f.r[n], f.len[n]), j, mats.finger);
+      const rEnd = n < 2 ? f.r[n + 1] : f.r[n] * 0.9;
+      for (const g of phalanx(f.r[n], rEnd, f.len[n])) put(g, j, mats.finger);
+      if (n > 0) {
+        // articulação: leve saliência no dorso e vinco em volta
+        const knob = new THREE.SphereGeometry(f.r[n] * 1.06, 12, 8);
+        knob.scale(1.06, 0.82, 0.9);
+        knob.translate(0, f.r[n] * 0.12, 0.0);
+        put(knob, j, mats.finger);
+        const ring = new THREE.TorusGeometry(f.r[n] * 1.0, 0.0011, 4, 16);
+        ring.scale(1.08, 0.88, 1);
+        ring.translate(0, 0, 0.004);
+        put(ring, j, mats.crease);
+      }
       if (n < 2) {
         const pad = new THREE.CapsuleGeometry(f.r[n] * 0.62, f.len[n] * (n === 0 ? 0.36 : 0.26), 3, 8);
         pad.rotateX(Math.PI / 2);
@@ -309,6 +368,16 @@ export function buildHand(k, pose, mats, sleeveMat) {
   thenar.scale(1, 0.75, 1.5);
   thenar.translate(0.019, -0.006, -0.022);
   put(thenar, root, mats.palm);
+  // eminência hipotenar (lado do dedo mínimo) e almofada sob os nós dos dedos
+  const hypo = new THREE.SphereGeometry(0.016, 12, 10);
+  hypo.scale(0.9, 0.7, 1.7);
+  hypo.translate(-0.026, -0.007, -0.016);
+  put(hypo, root, mats.palm);
+  const ridge = new THREE.CapsuleGeometry(0.009, 0.05, 4, 10);
+  ridge.rotateZ(Math.PI / 2);
+  ridge.scale(1, 0.55, 1);
+  ridge.translate(-0.001, -halfT * 0.8, 0.033);
+  put(ridge, root, mats.palm);
   // protetor rígido dos nós e placa do dorso
   const knuckle = new THREE.CapsuleGeometry(0.0105, 0.05, 4, 12);
   knuckle.rotateZ(Math.PI / 2);
@@ -322,15 +391,12 @@ export function buildHand(k, pose, mats, sleeveMat) {
     b.translate(f.x, halfT * 0.85, f.z - 0.002);
     put(b, root, mats.pad);
   }
-  // arco do dorso (metacarpos) e painel acolchoado discreto
-  const dome = new THREE.SphereGeometry(0.036, 16, 10);
-  dome.scale(1.05, 0.26, 1.25);
-  dome.translate(-0.002, halfT * 0.55, 0.004);
+  // arco do dorso (metacarpos): volume contínuo e abaulado sobre a palma, mais alto no meio
+  const dome = new THREE.SphereGeometry(0.04, 24, 14);
+  dome.rotateX(Math.PI / 2); // polo da esfera para a frente: a trama do tecido não forma anéis no dorso
+  dome.scale(1.06, 0.4, 1.24);
+  dome.translate(-0.001, halfT * 0.42, 0.0);
   put(dome, root, mats.back);
-  const panel = new THREE.SphereGeometry(0.02, 14, 8);
-  panel.scale(1.1, 0.22, 1.25);
-  panel.translate(-0.004, halfT + 0.0035, 0.004);
-  put(panel, root, mats.pad);
   // punho da luva com tira de velcro e puxador
   const cuff = new THREE.CylinderGeometry(0.031, 0.034, 0.05, 18, 1, true);
   cuff.rotateX(Math.PI / 2);

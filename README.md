@@ -260,6 +260,8 @@ Durante a partida, **Enter** ou **T** abre o chat (no celular, o botão CHAT). N
 
 **Armas.** Dezesseis armas em nove categorias, incluindo as armas pesadas restritas (Minigun M134 e bazuca): pistolas (VP-9 e Brasa .50), submetralhadora (Ratel MK2), rifles de assalto (Tempest AR-K e Kestrel M7), rifles de precisão (Longinus .338, M82 .50 BMG, SVD-63, Espectro .338 LM e Horizonte .50 LR), escopeta (Bulldog 12), energia (Manoplas Fulgor) e corpo a corpo (katanas Kaze e Nodachi Raijin). Cada uma tem dano, multiplicador na cabeça, cadência, pente, reserva, tempo de recarga, recuo vertical e horizontal, dispersão (que cresce com movimento, salto e disparos seguidos e diminui agachado ou mirando), queda de dano com a distância, mobilidade, modelo 3D e som próprios.
 
+**Mãos em primeira pessoa.** As mãos usam luvas táticas montadas por código: cada dedo tem três falanges que afinam da base à ponta, levemente achatadas, com saliência e vinco nas articulações, protetores de borracha nos nós e pontas reforçadas; a palma tem o volume das bases do polegar e do mínimo, e o dorso é abaulado. O tecido tem trama fina, costuras, vincos de dobra e um brilho rasante que contorna os dedos. Os dedos se fecham junta por junta até encostar na arma (punho, guarda-mão, cabo ou barra de apoio), então a pegada se adapta a cada modelo.
+
 **Manoplas e katanas.** As Manoplas Fulgor são um par de luvas de energia que disparam feixes de luz alternando as mãos; o feixe não perde força com a distância, atravessa até três combatentes em linha (as paredes o detêm) e as células se recarregam com R. As espadas ocupam um terceiro espaço (tecla 3): o botão esquerdo corta em sequência, o direito desfere um golpe pesado, e um golpe pelas costas causa o dobro de dano. A Katana Kaze é leve e rápida; a Nodachi Raijin tem mais alcance e dano, com golpes mais lentos. Parte dos bots tem perfil de espadachim e avança com a lâmina.
 
 **Jogabilidade.** Física de colisão por caixas alinhadas, subida em obstáculos baixos, agachamento com verificação de teto, corrida, passos audíveis, recuo que volta sozinho e pode ser compensado com o mouse, disparos instantâneos (hitscan) com caixas de acerto para cabeça, tronco e pernas, proteção breve ao renascer e câmera de morte. No modo por equipes, o jogador eliminado acompanha um colega.
@@ -301,7 +303,7 @@ js/touch.js         controles de toque (joystick, mira por arraste, botões) a p
 js/touchlayout.js   comandos, layouts prontos, perfis, geometria e exportação dos controles de toque
 js/controleditor.js editor "Personalizar controles"
 js/story.js         modo história: campanha, motor de missões, rendição, prisão, reféns e relatório
-js/hands.js         mãos enluvadas articuladas da visão em primeira pessoa
+js/hands.js         mãos enluvadas articuladas da visão em primeira pessoa (falanges, articulações, tecido)
 js/training.js      centro de treinamento: estande de longa distância e dojô de bambus
 js/scope.js         luneta: ocular, retículos (mil-dot, PSO, árvore; segundo ou primeiro plano focal) e transição
 js/wind.js          vento dinâmico, desvio balístico, birutas e indicador
