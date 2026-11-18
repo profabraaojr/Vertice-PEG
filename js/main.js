@@ -432,6 +432,7 @@ class App {
     if (this.state !== 'playing') return;
     this.state = 'paused';
     this.game.paused = true;
+    this.game.closeScope(); // o menu nunca fica atrás da ocular da luneta
     this.input.enabled = false;
     this.releasePointer();
     this.menu.showPause(note);
@@ -452,6 +453,7 @@ class App {
     if (this.state !== 'playing') return;
     this.state = 'paused';
     this.game.paused = true;
+    this.game.closeScope();
     this.input.enabled = false;
     this.releasePointer();
     this.menu.openLoadout('ingame');

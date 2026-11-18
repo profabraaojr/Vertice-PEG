@@ -74,6 +74,17 @@ export class Game {
     this.pickups = null; // foto do professor (minigun) e caixa de armamento (bazuca)
   }
 
+  // Fecha a luneta na hora (ao abrir o menu de pausa): sem ocular sobre o menu e com o campo de
+  // visão normal; ao voltar, o jogador reabre a luneta com o botão direito.
+  closeScope() {
+    const p = this.player;
+    if (p) { p.zoomLevel = 0; p.ads = 0; }
+    this.scopeT = 0;
+    this.currentFov = settings.fov;
+    if (this.camera) { this.camera.fov = settings.fov; this.camera.updateProjectionMatrix(); }
+    this.scopeView.update(0, settings.fov, settings.fov, null, 0, 0, 0);
+  }
+
   // Vento da partida e birutas do mapa (sempre ligadas ao mesmo estado de vento)
   setupWind() {
     for (const s of this.socks) s.dispose();
