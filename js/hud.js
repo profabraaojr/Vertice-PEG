@@ -220,6 +220,14 @@ export class HUD {
       el.reload.classList.remove('hidden');
       el.reloadFill.style.width = `${(w.reloadProgress * 100).toFixed(1)}%`;
     } else el.reload.classList.add('hidden');
+    // minigun: temperatura dos canos (e aviso de rotação)
+    const hb = this.heatBar || (this.heatBar = { root: document.getElementById('heat-bar'), fill: document.getElementById('heat-fill'), label: document.getElementById('heat-label') });
+    if (def.heat && hb.root) {
+      hb.root.classList.remove('hidden');
+      hb.root.classList.toggle('hot', !!w.overheated);
+      hb.fill.style.width = `${Math.round((w.heat || 0) * 100)}%`;
+      hb.label.textContent = w.overheated ? 'SUPERAQUECIDA' : w.spinT < 0.98 ? 'GIRE OS CANOS' : 'CANOS';
+    } else if (hb.root) hb.root.classList.add('hidden');
     const slotsKey = `${p.weapons.primary?.def.id}|${p.weapons.secondary?.def.id}|${p.weapons.melee?.def.id}|${p.slot}`;
     if (this.cache.slots !== slotsKey) {
       this.cache.slots = slotsKey;

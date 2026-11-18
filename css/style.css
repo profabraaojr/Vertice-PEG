@@ -682,3 +682,15 @@ body.story #wind-hud { bottom: 100px; }
 .hf-hint { margin: 10px 0 0; font-size: 11px; color: #8d8270; }
 @media (max-width: 600px), (max-height: 480px) { .hf-frame { padding: 22px 16px 16px; } .hf-names { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); font-size: 13px; padding-top: 10px; margin-bottom: 12px; } .hf-classes { margin-bottom: 10px; } }
 #mp-name.bad { border-color: #ff8a7a; }
+
+/* minigun: temperatura dos canos */
+#heat-bar { position: relative; height: 6px; margin-top: 6px; background: rgba(255, 255, 255, 0.12); overflow: visible; }
+#heat-fill { height: 100%; width: 0; background: linear-gradient(90deg, #ffd166, #ff6a2a); transition: width 0.08s linear; }
+#heat-bar span { position: absolute; right: 0; top: 8px; font-family: var(--head); font-size: 10px; letter-spacing: 0.14em; color: var(--muted); }
+#heat-bar.hot #heat-fill { background: #ff3b2a; animation: heat-blink 0.35s steps(2) infinite; }
+#heat-bar.hot span { color: #ff6a50; }
+@keyframes heat-blink { 50% { opacity: 0.45; } }
+/* aviso para pegar a arma pesada (foto do professor ou caixa) */
+#pk-prompt { position: absolute; left: 50%; bottom: 28%; transform: translateX(-50%); padding: 8px 14px; background: rgba(8, 10, 13, 0.72); border: 1px solid rgba(255, 192, 74, 0.6); font-family: var(--head); font-size: 14px; letter-spacing: 0.04em; color: #f3e6c8; white-space: nowrap; z-index: 3; pointer-events: none; }
+#pk-prompt b { display: inline-block; min-width: 22px; padding: 1px 6px; margin-right: 8px; background: #ffc04a; color: #17120a; text-align: center; }
+body.touch #pk-prompt { bottom: auto; top: 24%; font-size: 12px; }

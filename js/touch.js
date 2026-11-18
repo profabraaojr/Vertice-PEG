@@ -122,7 +122,7 @@ export class TouchControls {
     this.sink = opts.sink || gameSink(app);
     this.getSize = opts.getSize || (() => ({ W: window.innerWidth, H: window.innerHeight, insets: readSafeInsets() }));
     this.getLayout = opts.getLayout || activeLayout;
-    this.ctx = opts.ctx || (() => ({ night: !!(app.map && app.map.night), net: !!(app.net && app.net.active), story: !!(app.game && app.game.story) }));
+    this.ctx = opts.ctx || (() => ({ night: !!(app.map && app.map.night), net: !!(app.net && app.net.active), story: !!(app.game && app.game.story), act: !!(app.game && (app.game.story || (app.game.pickups && app.game.pickups.near))) }));
     this.toLocal = opts.toLocal || ((x, y) => ({ x, y }));
     this.onEvent = opts.onEvent || null;
     this.isGame = !opts.container;

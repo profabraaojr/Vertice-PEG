@@ -137,6 +137,21 @@ O M82 inspira-se no Barrett M82, o SVD-63 no Dragunov SVD e o Espectro na estét
 
 No retículo de primeiro plano focal (Horizonte), o desenho cresce com a ampliação e cada marca vale sempre 1 mil. Nos de segundo plano focal (os demais), o retículo tem tamanho fixo e está calibrado na ampliação máxima.
 
+## Armas pesadas: Minigun M134 e bazuca
+
+Duas armas restritas, com modelo, sons, recuo e animações próprios:
+
+- **Minigun M134** (7,62 × 51 mm, seis canos): os canos precisam girar antes de disparar (cerca de meio segundo segurando o gatilho ou o botão direito, que só gira sem atirar). Dispara 1.500 tiros por minuto de uma cinta de 300, esquenta com rajadas longas (barra "CANOS" no HUD) e trava por superaquecimento até esfriar. Deixa o jogador lento (62% da velocidade) e não tem mira.
+- **Bazuca** (foguete de 84 mm): o foguete voa a 48 m/s com leve queda e explode ao bater no cenário ou num combatente. O dano cai com a distância do centro (raio de 5,5 m), só atinge quem está à vista da explosão (paredes protegem) e fere também quem disparou muito perto, pela metade. Um foguete por recarga, cinco de reserva. A ogiva aparece no tubo quando ele está carregado.
+
+**Onde usar:**
+
+- **Modo história:** a tela da missão tem a opção **Arma principal** (padrão da missão, Minigun M134 ou bazuca), que vale para as quatro missões.
+- **Treino:** escolha no arsenal.
+- **Partidas (equipe e mata-mata, inclusive no multijogador):** as escolhas do arsenal não valem; o jogador entra com o Tempest. A **foto do professor** (Prof. Esp. Abraão Junio de Souza Costa) aparece emoldurada numa parede sorteada a cada partida; quem chegar perto e apertar **E** (no celular, **AÇÃO**) recebe a minigun. Uma **caixa de armamento** em outro local sorteado entrega a bazuca do mesmo jeito. Só uma pessoa por vez fica com cada arma; quando ela cai, perde a arma, e a foto (ou a caixa) reaparece em outro lugar depois de 8 segundos. Os bots não pegam essas armas.
+
+No multijogador, o anfitrião sorteia os locais, decide quem pegou e resolve o dano das explosões; os convidados veem a foto, a caixa, os foguetes e as explosões conforme o anfitrião. Um convidado que declare uma arma pesada sem tê-la pegado aparece com o rifle padrão, e os foguetes dele são recusados.
+
 ## Centro de treinamento
 
 No menu principal, **Centro de treinamento** leva a um complexo com duas áreas (dá para ir de uma à outra a pé):
@@ -237,7 +252,7 @@ Durante a partida, **Enter** ou **T** abre o chat (no celular, o botão CHAT). N
 
 **Modos.** *Equipe contra equipe* (Vanguarda × Sentinela) em rodadas de eliminação, com fase de preparação, cronômetro de 1:55 e vitória por número de rodadas; quando o tempo acaba, vence a equipe com mais sobreviventes ou, em caso de empate, a que tem mais vida somada. *Mata-mata*, todos contra todos, com renascimento em pontos seguros e limite de eliminações ou de tempo. *Treinamento*, com bots que renascem continuamente, munição infinita, estatísticas de precisão e a opção de bots que não revidam.
 
-**Armas.** Catorze armas em sete categorias: pistolas (VP-9 e Brasa .50), submetralhadora (Ratel MK2), rifles de assalto (Tempest AR-K e Kestrel M7), rifles de precisão (Longinus .338, M82 .50 BMG, SVD-63, Espectro .338 LM e Horizonte .50 LR), escopeta (Bulldog 12), energia (Manoplas Fulgor) e corpo a corpo (katanas Kaze e Nodachi Raijin). Cada uma tem dano, multiplicador na cabeça, cadência, pente, reserva, tempo de recarga, recuo vertical e horizontal, dispersão (que cresce com movimento, salto e disparos seguidos e diminui agachado ou mirando), queda de dano com a distância, mobilidade, modelo 3D e som próprios.
+**Armas.** Dezesseis armas em nove categorias, incluindo as armas pesadas restritas (Minigun M134 e bazuca): pistolas (VP-9 e Brasa .50), submetralhadora (Ratel MK2), rifles de assalto (Tempest AR-K e Kestrel M7), rifles de precisão (Longinus .338, M82 .50 BMG, SVD-63, Espectro .338 LM e Horizonte .50 LR), escopeta (Bulldog 12), energia (Manoplas Fulgor) e corpo a corpo (katanas Kaze e Nodachi Raijin). Cada uma tem dano, multiplicador na cabeça, cadência, pente, reserva, tempo de recarga, recuo vertical e horizontal, dispersão (que cresce com movimento, salto e disparos seguidos e diminui agachado ou mirando), queda de dano com a distância, mobilidade, modelo 3D e som próprios.
 
 **Manoplas e katanas.** As Manoplas Fulgor são um par de luvas de energia que disparam feixes de luz alternando as mãos; o feixe não perde força com a distância, atravessa até três combatentes em linha (as paredes o detêm) e as células se recarregam com R. As espadas ocupam um terceiro espaço (tecla 3): o botão esquerdo corta em sequência, o direito desfere um golpe pesado, e um golpe pelas costas causa o dobro de dano. A Katana Kaze é leve e rápida; a Nodachi Raijin tem mais alcance e dano, com golpes mais lentos. Parte dos bots tem perfil de espadachim e avança com a lâmina.
 
@@ -270,6 +285,8 @@ js/physics.js       colisão e raycast contra o cenário
 js/nav.js           A* e suavização de trajetos
 js/guns.js          modelos detalhados das armas (perfis extrudados, materiais, reflexos)
 js/rifles.js        modelos dos rifles M82, SVD-63, Espectro e Horizonte
+js/heavy.js         modelos da Minigun M134 (canos giratórios) e da bazuca
+js/ordnance.js      foguetes, explosões, foto do professor e caixa de armamento
 js/preview.js       prévia 3D das armas no arsenal
 js/models.js        modelos dos personagens (rosto, olhos, cabelo, farda)
 js/profiles.js      perfil do jogador (apelido, validação, aparência) e camuflagens

@@ -31,7 +31,7 @@ export const COMMANDS = {
   last: { label: 'Última arma', short: 'ÚLTIMA', kind: 'tap', key: 'KeyQ' },
   inspect: { label: 'Inspecionar a arma', short: 'INSPEC.', kind: 'tap', key: 'KeyF' },
   nv: { label: 'Visão noturna (mapa noturno)', short: 'NV', kind: 'tap', key: 'KeyX', when: 'night' },
-  interact: { label: 'Interagir · voz de prisão (modo história)', short: 'AÇÃO', kind: 'hold', key: 'KeyE', press: true, when: 'story' },
+  interact: { label: 'Interagir · voz de prisão (modo história) · pegar arma pesada', short: 'AÇÃO', kind: 'hold', key: 'KeyE', press: true, when: 'act' },
   loadout: { label: 'Armas (inventário)', short: 'ARMAS', kind: 'tap', key: 'KeyB' },
   board: { label: 'Placar (segurar)', short: 'PLACAR', kind: 'hold', key: 'Tab' },
   chat: { label: 'Chat (multijogador)', short: 'CHAT', kind: 'tap', action: 'chat', when: 'net' },

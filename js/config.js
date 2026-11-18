@@ -189,6 +189,36 @@ export const WEAPONS = {
     bot: { pref: 6 },
     desc: 'Escopeta de bombeamento. Devastadora em corredores, inútil a distância.',
   },
+  // armas pesadas (restritas): só no modo história, no treino e, nas partidas, pela foto do
+  // professor (minigun) ou pela caixa de armamento (bazuca) — ver js/ordnance.js
+  m134: {
+    id: 'm134', name: 'Minigun M134', caliber: '7,62 × 51 mm', optic: 'Sem mira óptica', rangeText: '5 a 50 m', category: 'Metralhadora rotativa · restrita', slot: 'primary', heavy: true,
+    damage: 15, headMult: 2.2, legMult: 0.8, rpm: 1500, auto: true, pellets: 1,
+    mag: 300, reserve: 300, reload: 5.2,
+    spread: 0.022, moveSpread: 0.03, airSpread: 0.12, crouchMult: 0.8, adsMult: 0.85,
+    perShot: 0.0006, maxSpread: 0.045, spreadRecover: 0.3,
+    recoil: 0.18, recoilH: 0.35, recoilRecover: 10,
+    range: 50, minFalloff: 0.6, speed: 0.62, adsZoom: 1.05,
+    spin: { up: 0.55, down: 1.2 }, heat: { perShot: 0.0042, cool: 0.32, lock: 2.6 },
+    sound: { freq: 760, low: 95, decay: 0.05, gain: 0.55, tail: 0.12 },
+    model: { type: 'minigun', body: 0x2b2d30, accent: 0x5a5d33 },
+    bot: { pref: 18 },
+    desc: 'Seis canos giratórios, cadência altíssima. Precisa girar antes de disparar (segure o gatilho ou o botão direito), esquenta com rajadas longas e deixa o jogador lento.',
+  },
+  rpg: {
+    id: 'rpg', name: 'Bazuca', caliber: 'Foguete de 84 mm', optic: 'Alça de mira rebatível', rangeText: '10 a 120 m', category: 'Lança-foguetes · restrita', slot: 'primary', heavy: true,
+    damage: 135, headMult: 1, legMult: 1, rpm: 40, auto: false, pellets: 1,
+    mag: 1, reserve: 5, reload: 2.9,
+    spread: 0.006, moveSpread: 0.03, airSpread: 0.1, crouchMult: 0.8, adsMult: 0.5,
+    perShot: 0, maxSpread: 0, spreadRecover: 1,
+    recoil: 4.5, recoilH: 0.6, recoilRecover: 6,
+    range: 120, minFalloff: 1, speed: 0.78, adsZoom: 1.25,
+    rocket: { speed: 48, radius: 5.5, minDamage: 15, self: 0.5, gravity: 1.2, life: 4 },
+    sound: { freq: 220, low: 55, decay: 0.4, gain: 1.1, tail: 1.2 },
+    model: { type: 'launcher', body: 0x4a5235, accent: 0x2a2c2e },
+    bot: { pref: 25 },
+    desc: 'Lança um foguete com tempo de voo e explosão em área; o dano cai com a distância do centro e atinge também quem dispara muito perto. Um foguete por recarga.',
+  },
   fulgor: {
     id: 'fulgor', name: 'Manoplas Fulgor', caliber: 'Feixe de energia', optic: 'Sem mira óptica', rangeText: '5 a 40 m', category: 'Energia', slot: 'primary',
     damage: 25, headMult: 2.4, legMult: 0.8, rpm: 480, auto: true, pellets: 1,
@@ -227,6 +257,11 @@ export const WEAPONS = {
 };
 
 export const PRIMARY_IDS = ['tempest', 'kestrel', 'ratel', 'longinus', 'm82', 'svd', 'spectre', 'lr50', 'bulldog', 'fulgor'];
+// armas pesadas: aparecem no arsenal, mas só valem no modo história e no treino
+export const HEAVY_IDS = ['m134', 'rpg'];
+export const heavyAllowed = (mode) => mode === 'story' || mode === 'training';
+// arma pesada fora do modo história e do treino: volta para o rifle padrão
+export const safePrimary = (id, mode) => (WEAPONS[id] && WEAPONS[id].heavy && !heavyAllowed(mode) ? 'tempest' : id);
 export const SECONDARY_IDS = ['vp9', 'brasa'];
 export const MELEE_IDS = ['katana', 'nodachi'];
 

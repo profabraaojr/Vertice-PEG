@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { Proxy } from './remote.js';
 import { Player } from './player.js';
-import { TEAMS, WEAPONS } from './config.js';
+import { TEAMS, WEAPONS, safePrimary, heavyAllowed } from './config.js';
+import { HeavyPickups } from './ordnance.js';
 import { settings } from './settings.js';
 import { rayAABB } from './utils.js';
 import { sanitizeLook, activeLook, playerName, nicknameProblem, cleanNickname } from './profiles.js';
@@ -45,7 +46,7 @@ export function installCoop(Game) {
     const r = new Proxy({ id: 100 + peer.id, name: pname, team, color, peerId: peer.id, look: peer.look ? sanitizeLook(peer.look, peer.name) : null });
     r.look = peer.look ? sanitizeLook(peer.look, peer.name) : null;
     const lo = peer.loadout || {};
-    r.setLoadout(WEAPONS[lo.primary] ? lo.primary : 'tempest', WEAPONS[lo.secondary] ? lo.secondary : 'vp9', this.config.mode === 'training', lo.melee);
+    r.setLoadout(WEAPONS[lo.primary] ? safePrimary(lo.primary, this.config.mode) : 'tempest', WEAPONS[lo.secondary] ? lo.secondary : 'vp9', this.config.mode === 'training', lo.melee);
     r.netWeapon = r.weapons.primary ? r.weapons.primary.def : r.weapons.secondary.def;
     r.addNameTag(r.name, TEAMS[team] ? TEAMS[team].css : '#ffffff');
     this.scene.add(r.model.root);
@@ -111,15 +112,28 @@ export function installCoop(Game) {
     switch (msg.t) {
       case 'in':
         if (msg.s !== r.spawnSeq || !r.alive) return;
-        r.applyNet(msg.p[0], msg.p[1], msg.p[2], msg.yw, msg.pt, msg.ct, msg.w, msg.v[0], msg.v[1]);
+        {
+          // arma pesada informada por quem não a pegou: mostra o rifle padrão
+          const wd = WEAPONS[msg.w];
+          const wid = wd && wd.heavy && !heavyAllowed(this.config.mode) && !(r.heavy && r.heavy.weapon === msg.w) ? 'tempest' : msg.w;
+          r.applyNet(msg.p[0], msg.p[1], msg.p[2], msg.yw, msg.pt, msg.ct, wid, msg.v[0], msg.v[1]);
+        }
         break;
       case 'fire': {
         if (!r.alive || !this.canShoot(r)) return;
         const def = WEAPONS[msg.w];
         if (!def || def.melee) return;
+        if (def.heavy && !heavyAllowed(this.config.mode) && !(r.heavy && r.heavy.weapon === def.id)) return; // arma pesada só com quem pegou a foto ou a caixa
         r.spawnProtect = 0;
         r.shots++;
         _o.set(msg.o[0], msg.o[1], msg.o[2]);
+        if (def.rocket) {
+          if (_o.distanceTo(r.pos) > 3) _o.set(r.pos.x, r.pos.y + r.eyeHeight(), r.pos.z);
+          const dd = (msg.d || [])[0];
+          if (dd) this.ordnance.launch(r, _o.clone(), _d.set(dd[0], dd[1], dd[2]).normalize().clone(), def);
+          r.spottedUntil = this.time + 1.5;
+          break;
+        }
         // a origem informada precisa estar perto do corpo do convidado
         if (_o.distanceTo(r.pos) > 3) _o.set(r.pos.x, r.pos.y + r.eyeHeight(), r.pos.z);
         this.fxBegin();
@@ -145,7 +159,11 @@ export function installCoop(Game) {
         break;
       }
       case 'loadout':
-        r.setLoadout(msg.primary, msg.secondary, this.config.mode === 'training', msg.melee);
+        r.setLoadout(safePrimary(msg.primary, this.config.mode), msg.secondary, this.config.mode === 'training', msg.melee);
+        r.heavy = null; r.heavyPrev = null;
+        break;
+      case 'pick':
+        if (this.pickups && r.alive) this.pickups.grant(r, msg.k);
         break;
       default: break;
     }
@@ -172,7 +190,8 @@ export function installCoop(Game) {
       c.spawnProtect > 0 ? 1 : 0,
     ]);
     const w = this.wind ? [r3(this.wind.base.dir), r2(this.wind.base.speed)] : null;
-    this.net.broadcast({ t: 'snap', tm: r2(t), ph: this.phase, pt: r2(this.phaseT), rd: this.round, ts: this.teamScore, e, w }, true);
+    const pk = this.pickups ? this.pickups.snapshot() : null;
+    this.net.broadcast({ t: 'snap', tm: r2(t), ph: this.phase, pt: r2(this.phaseT), rd: this.round, ts: this.teamScore, e, w, pk }, true);
     if (this.fxQueue.length) {
       for (const peer of this.net.connectedPeers) {
         const myId = 100 + peer.id;
@@ -210,7 +229,7 @@ export function installCoop(Game) {
     for (const rr of msg.roster) {
       if (rr.peer === this.net.myId) {
         const p = new Player({ id: rr.id, name: playerName(), team: rr.team, color: rr.color });
-        p.setLoadout(settings.loadout.primary, settings.loadout.secondary, mode === 'training', settings.loadout.melee);
+        p.setLoadout(safePrimary(settings.loadout.primary, mode), settings.loadout.secondary, mode === 'training', settings.loadout.melee);
         p.alive = false;
         p.spawnSeq = 0;
         p.respawnTimer = 0;
@@ -226,6 +245,7 @@ export function installCoop(Game) {
     }
     this.viewmodel.setWeapon(this.player.weapon.def, false);
     this.effects.clear();
+    if (mode === 'team' || mode === 'ffa') this.pickups = new HeavyPickups(this); // posições chegam no instantâneo do anfitrião
     this.active = true;
     this.paused = false;
     if (this.setupWind) { this.setupWind(); this.wind.remote = true; this.wind.dynamic = false; }
@@ -244,6 +264,7 @@ export function installCoop(Game) {
         this.round = msg.rd;
         this.teamScore = msg.ts;
         if (msg.w && this.wind) this.wind.setRemote(msg.w[0], msg.w[1]); // vento do anfitrião
+        if (msg.pk && this.pickups) this.pickups.applyRemote(msg.pk); // foto do professor e caixa de armamento
         for (const e of msg.e) {
           const c = this.byId(e[0]);
           if (!c) continue;
@@ -317,6 +338,11 @@ export function installCoop(Game) {
       case 'fx':
         for (const f of msg.l) this.clientFx(f);
         break;
+      case 'heavy':
+        // o anfitrião entregou (ou recolheu) a arma pesada
+        if (this.pickups) this.pickups.give(p, msg.w || null);
+        p.heavy = msg.w ? { kind: msg.w } : null;
+        break;
       case 'end': {
         const res = msg.r;
         res.rows = res.rows.map((row) => ({ ...row, isPlayer: row.id === p.id }));
@@ -359,6 +385,10 @@ export function installCoop(Game) {
         }
       });
       if (c) c.spottedUntil = this.time + 1.2;
+    } else if (f.k === 'rk') {
+      this.ordnance.remoteRocket(f);
+    } else if (f.k === 'ex') {
+      this.ordnance.remoteExplosion(f);
     } else if (f.k === 'm') {
       if (c && c.model) c.model.swing();
       if (c) this.audio.swing(!!f.h, c.pos);
@@ -440,6 +470,8 @@ export function installCoop(Game) {
       }
     }
     for (const c of this.combatants) if (c !== p) c.update(dt);
+    this.ordnance.update(dt);
+    if (this.pickups) this.pickups.update(dt);
     this.inputT -= dt;
     if (this.inputT <= 0 && p.alive) {
       this.inputT = INPUT_DT;

@@ -145,6 +145,62 @@ export class AudioEngine {
     if (p.tail) this.noiseBurst(dest, t + 0.02, p.tail, 'lowpass', 900, g * 0.18, 0.5, 200);
   }
 
+  // Minigun: zumbido do motor elétrico que sobe com a rotação (contínuo; level de 0 a 1).
+  spin(level, hot = false) {
+    if (!this.ctx) return;
+    if (!this.spinNode) {
+      if (level <= 0.001) return;
+      const o1 = this.ctx.createOscillator(), o2 = this.ctx.createOscillator();
+      o1.type = 'sawtooth'; o2.type = 'square';
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = 900;
+      const g = this.ctx.createGain();
+      g.gain.value = 0;
+      o1.connect(f); o2.connect(f); f.connect(g); g.connect(this.sfx);
+      o1.start(); o2.start();
+      this.spinNode = { o1, o2, f, g };
+    }
+    const n = this.spinNode, t = this.ctx.currentTime;
+    n.o1.frequency.setTargetAtTime(60 + level * 260, t, 0.05);
+    n.o2.frequency.setTargetAtTime(120 + level * 520, t, 0.05);
+    n.f.frequency.setTargetAtTime(400 + level * 1600 + (hot ? 900 : 0), t, 0.05);
+    n.g.gain.setTargetAtTime(level * 0.085, t, 0.04);
+    if (level <= 0.001) {
+      n.o1.stop(t + 0.3); n.o2.stop(t + 0.3);
+      this.spinNode = null;
+    }
+  }
+
+  // canos superaquecidos: chiado metálico
+  overheat() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noiseBurst(this.sfx, t, 0.9, 'highpass', 5000, 0.18, 0.7, 2500);
+    this.tone(this.sfx, t, 0.5, 'sine', 1800, 900, 0.06);
+  }
+
+  // Foguete: estouro de saída, sopro traseiro e assobio do motor
+  rocketLaunch(pos = null) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const dest = this.out(pos, true);
+    this.noiseBurst(dest, t, 0.35, 'lowpass', 1800, 1.0, 0.7, 300);
+    this.tone(dest, t, 0.3, 'sine', 120, 40, 0.8);
+    this.noiseBurst(dest, t + 0.05, 1.1, 'bandpass', 2200, 0.25, 2, 900);
+  }
+
+  // Explosão: estrondo grave, estalo e cauda longa (com eco nos espaços abertos)
+  explosion(pos = null, near = 0) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const dest = this.out(pos, true);
+    const g = 1.3 + near * 0.6;
+    this.noiseBurst(dest, t, 0.06, 'highpass', 2500, g * 0.5);
+    this.noiseBurst(dest, t, 1.4, 'lowpass', 1200, g, 0.6, 90);
+    this.tone(dest, t, 0.9, 'sine', 90, 28, g * 0.9);
+    this.noiseBurst(dest, t + 0.08, 2.2, 'lowpass', 500, g * 0.3, 0.5, 120);
+  }
+
   // Feixe de luz: varredura descendente com harmônicos e chiado elétrico.
   laser(p, pos = null, vol = 1) {
     const t = this.ctx.currentTime;

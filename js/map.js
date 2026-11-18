@@ -337,6 +337,9 @@ function muralSpots(avoid) {
   return spots;
 }
 
+// Trechos de parede livres no mapa atual (usados também pela foto do professor, js/ordnance.js).
+export function wallSpots(avoid = []) { return muralSpots(avoid); }
+
 function addMural(root, avoid, seed = Math.random()) {
   const spots = muralSpots(avoid);
   if (!spots.length) return null;

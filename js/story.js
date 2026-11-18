@@ -1011,7 +1011,7 @@ KINDS.sniper = {
   playerStart(m) { return { x: m.player0.x, z: m.player0.z, y: 2.7, yaw: Math.PI * 0.85 }; },
   start(m) {
     const g = m.game;
-    g.player.setLoadout('longinus', 'vp9', false, 'katana');
+    g.player.setLoadout(g.config.storyWeapon || 'longinus', 'vp9', false, 'katana'); // arma pesada escolhida substitui o rifle
     g.player.resetView();
     g.viewmodel.setWeapon(g.player.weapon.def, false);
     g.player.pos.y = 2.7;

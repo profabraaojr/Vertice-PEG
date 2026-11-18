@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { mulberry32 } from './utils.js';
 import { buildRifle, RIFLE_TYPES } from './rifles.js';
+import { buildHeavy, HEAVY_TYPES } from './heavy.js';
 
 // ---------------------------------------------------------------- ambiente e materiais
 let ENV = null;
@@ -729,6 +730,7 @@ export function buildGun(def) {
     }
     default: {
       if (RIFLE_TYPES.has(md.type)) { buildRifle(md, k, out, sub, { gunmetal, steelDark, polyDark, rubber, bore }); break; }
+      if (HEAVY_TYPES.has(md.type)) { buildHeavy(md, k, out, sub, { gunmetal, steelDark, polyDark, rubber, bore }); break; }
       k.box(0.05, 0.07, 0.4, 0, 0.03, 0.1, gunmetal);
       out.muzzle.position.set(0, 0.03, -0.32);
     }

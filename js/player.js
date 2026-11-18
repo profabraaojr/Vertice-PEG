@@ -162,6 +162,10 @@ export class Player extends Combatant {
       }
       if (this.sprinting || w.reloading) this.zoomLevel = 0;
       this.ads = approach(this.ads, 0, dt * 8);
+    } else if (def.spin) {
+      // minigun: o botão direito (ou o gatilho) gira os canos; não há mira
+      this.ads = approach(this.ads, 0, dt * 8);
+      this.zoomLevel = 0;
     } else {
       const want = input.mouse.right && !this.sprinting && !w.reloading && this.switchT <= 0;
       this.ads = approach(this.ads, want ? 1 : 0, dt * 7);
@@ -176,6 +180,12 @@ export class Player extends Combatant {
 
     // ---- disparo ----
     const trigger = input.mouse.left || input.mouse.leftPressed; // cliques curtos entre quadros também contam
+    if (def.spin) {
+      const was = w.overheated;
+      w.updateSpin(dt, (trigger || input.mouse.right) && canShoot && !this.sprinting && !w.reloading && this.switchT <= 0);
+      if (w.overheated && !was) game.audio.overheat();
+      game.audio.spin(w.spinT, w.overheated);
+    }
     if (!input.mouse.left && !input.mouse.leftPressed) w.triggerReleased = true;
     if (trigger && canShoot && !this.sprinting && this.switchT <= 0) {
       if (!w.reloading) {
@@ -185,7 +195,7 @@ export class Player extends Combatant {
             game.audio.dryFire();
             if (w.startReload()) game.audio.reload(def);
           }
-        } else if (w.cooldown <= 0 && (def.auto || w.triggerReleased)) {
+        } else if (w.cooldown <= 0 && (def.auto || w.triggerReleased) && w.spunUp) {
           w.triggerReleased = false;
           game.playerFire(this);
         }

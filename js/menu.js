@@ -1,6 +1,6 @@
 // Navegação entre telas, opções de partida, seleção de armas e configurações.
 import { settings, saveSettings, resetSettings } from './settings.js';
-import { WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS, MODE_INFO, weaponStats, TEAMS } from './config.js';
+import { WEAPONS, PRIMARY_IDS, HEAVY_IDS, SECONDARY_IDS, MELEE_IDS, MODE_INFO, weaponStats, TEAMS } from './config.js';
 import { EMBEDDED, BLOCKED_MSG } from './net.js';
 import { MAPS, MAP_IDS } from './map.js';
 import { pwa, isStandalone, platform, promptInstall } from './pwa.js';
@@ -177,7 +177,7 @@ export class Menu {
         box.appendChild(b);
       });
     };
-    mk(PRIMARY_IDS, $('lo-primary'), 'primary');
+    mk([...PRIMARY_IDS, ...HEAVY_IDS], $('lo-primary'), 'primary');
     mk(SECONDARY_IDS, $('lo-secondary'), 'secondary');
     mk(MELEE_IDS, $('lo-melee'), 'melee');
   }
@@ -250,9 +250,10 @@ export class Menu {
       ['Distância prevista', def.rangeText || '—'],
       ['Dano', def.pellets > 1 ? `${def.damage} × ${def.pellets}` : def.damage],
       ['Cadência', `${def.rpm} dpm`],
-      ['Pente', `${def.mag} / ${def.reserve}`],
+      [def.spin ? 'Cinta' : def.rocket ? 'Foguetes' : 'Pente', `${def.mag} / ${def.reserve}`],
       ['Recarga', `${def.reload.toFixed(1)} s`],
-      ['Ação', def.beam ? 'Feixe perfurante' : def.auto ? 'Automático' : def.action === 'bolt' ? 'Ferrolho' : def.pellets > 1 ? 'Bombeamento' : 'Semiautomático'],
+      ['Ação', def.rocket ? 'Foguete com explosão em área' : def.spin ? 'Rotativa (gira antes de disparar)' : def.beam ? 'Feixe perfurante' : def.auto ? 'Automático' : def.action === 'bolt' ? 'Ferrolho' : def.pellets > 1 ? 'Bombeamento' : 'Semiautomático'],
+      ...(def.heavy ? [['Onde usar', def.id === 'm134' ? 'Modo história e treino; nas partidas, quem achar a foto do professor' : 'Modo história e treino; nas partidas, quem achar a caixa de armamento']] : []),
       ...(def.zoom ? [['Ampliações', def.zoom.map((f) => `${Math.round(80 / f)}×`).join(' · ')]] : []),
       ['Mobilidade', `${Math.round(def.speed * 100)}%`],
     ];
@@ -551,6 +552,12 @@ export class Menu {
       b.classList.toggle('active', b.dataset.v === this.storyDiff);
       b.onclick = () => { this.storyDiff = b.dataset.v; this.openStory(); };
     });
+    // armas pesadas liberadas no modo história (substituem o rifle da missão)
+    $('sb-wpn-wrap').classList.toggle('hidden', !m.ready);
+    $('sb-wpn').querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.v === (this.storyWpn || ''));
+      b.onclick = () => { this.storyWpn = b.dataset.v; this.openStory(); };
+    });
     const pr = prog[m.id];
     $('sb-best').textContent = pr && pr.done ? `Melhor resultado: ${pr.best} pontos · ${'★'.repeat(pr.stars)}${'☆'.repeat(3 - pr.stars)}` : '';
     if (this.current !== 'screen-story') this.show('screen-story');
@@ -559,7 +566,7 @@ export class Menu {
   startStory() {
     const m = missionById(this.storySel || 'm1');
     if (!m || !m.ready) return;
-    this.app.startMatch({ mode: 'story', mission: m.id, map: m.map, difficulty: this.storyDiff || 'soldado', bots: 0, timeLimit: 0, scoreLimit: 0, rounds: 0, botsShoot: true });
+    this.app.startMatch({ mode: 'story', mission: m.id, map: m.map, difficulty: this.storyDiff || 'soldado', bots: 0, timeLimit: 0, scoreLimit: 0, rounds: 0, botsShoot: true, storyWeapon: this.storyWpn || '' });
   }
 
   // ---------- centro de treinamento ----------

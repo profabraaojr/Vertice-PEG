@@ -11,10 +11,11 @@ const HIP = {
   ar: [0.11, -0.17, -0.35], ar2: [0.11, -0.175, -0.35], sniper: [0.11, -0.18, -0.35], shotgun: [0.11, -0.17, -0.35],
   katana: [0.17, -0.17, -0.44], nodachi: [0.18, -0.19, -0.46], gauntlet: [0, -0.23, -0.46],
   m82: [0.115, -0.19, -0.36], svd: [0.11, -0.175, -0.35], spectre: [0.11, -0.18, -0.35], lr50: [0.115, -0.195, -0.37],
+  minigun: [0.12, -0.2, -0.36], launcher: [0.13, -0.16, -0.3],
 };
 // inclinação lateral de repouso (fora da mira). A direção do cano não entra aqui: ela é
 // calculada para cada arma de modo que a linha do cano cruze o centro da mira (ver aimAt).
-const HIP_ROLL = { pistol: -0.05, revolver: -0.05, smg: -0.16, ar: -0.18, ar2: -0.18, sniper: -0.16, shotgun: -0.18, m82: -0.12, svd: -0.16, spectre: -0.15, lr50: -0.11 };
+const HIP_ROLL = { pistol: -0.05, revolver: -0.05, smg: -0.16, ar: -0.18, ar2: -0.18, sniper: -0.16, shotgun: -0.18, m82: -0.12, svd: -0.16, spectre: -0.15, lr50: -0.11, minigun: -0.08, launcher: -0.06 };
 const CONVERGE = 9; // distância (m) em que a linha do cano encontra o centro da tela
 
 // Ângulos (rx, ry) que fazem a linha do cano, saindo da posição de repouso, passar por (0, 0, -D).
@@ -154,6 +155,20 @@ const GRIPS = {
     const recv = sdBox([0, 0.034, -0.05], [0.029, 0.034, 0.17], 0.006);
     const hg = sdBox([0, 0.053, -0.46], [0.04, 0.034, 0.24], 0.01);
     return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(hg, 0.05, -0.29) }];
+  },
+  // armas pesadas (ver js/heavy.js): punho traseiro e barra de apoio sob os canos; bazuca com a
+  // mão de apoio no punho dianteiro, sob o tubo
+  minigun() {
+    const g = gripShape([-0.029, -0.006], [-0.044, -0.119], 0.038, 0.05);
+    const recv = sdBox([0, 0.035, -0.065], [0.055, 0.05, 0.135], 0.01);
+    const bar = sdBox([0, -0.04, -0.285], [0.013, 0.013, 0.085], 0.012);
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(bar, -0.04, -0.29, { phi: 0.7 }) }];
+  },
+  launcher() {
+    const g = gripShape([-0.027, -0.004], [-0.041, -0.114], 0.036, 0.048);
+    const recv = sdBox([0, 0.078, -0.0], [0.042, 0.042, 0.2], 0.03);
+    const fore = sdUnion(sdTiltBox([0, -0.03, -0.239], [0.017, 0.05, 0.02], 0.008, 0.06), sdBox([0, 0.078, -0.24], [0.042, 0.042, 0.06], 0.03));
+    return [{ pose: triggerPose(g, recv) }, { mirror: true, pose: supportPose(fore, -0.02, -0.24, { phi: 0.55 }) }];
   },
   shotgun() {
     const g = gripShape([-0.04, -0.01], [-0.083, -0.114], 0.036, 0.05);
@@ -446,6 +461,10 @@ export class ViewModel {
     }
     // semiautomáticos: a manopla de manejo recua com o ferrolho a cada disparo
     if (this.def.action === 'semi' && gun.slide) gun.slide.position.z = this.slideKick * (type === 'm82' ? 0.09 : 0.06);
+    // minigun: o feixe de canos gira conforme a rotação do mecanismo (s.spin de 0 a 1)
+    if (gun.spinner) { this.spinA = (this.spinA || 0) + (s.spin || 0) * dt * 55; gun.spinner.rotation.z = this.spinA; }
+    // bazuca: a ogiva aparece com o tubo carregado
+    if (gun.rocket) gun.rocket.visible = !s.empty || (s.reload != null && s.reload > 0.55);
     // ciclo de bombeamento / ferrolho do rifle de precisão
     const c = this.cycleT < 1 ? Math.sin(this.cycleT * Math.PI) : 0;
     if (gun.pump) gun.pump.position.z = c * 0.085;

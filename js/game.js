@@ -6,7 +6,8 @@ import { ScopeView } from './scope.js';
 import { Wind, Windsock, WindIndicator, WINDSOCK_SPOTS, windDeflect } from './wind.js';
 import { Player } from './player.js';
 import { Bot } from './bot.js';
-import { TEAMS, FFA_COLORS, BOT_NAMES, WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS } from './config.js';
+import { TEAMS, FFA_COLORS, BOT_NAMES, WEAPONS, PRIMARY_IDS, SECONDARY_IDS, MELEE_IDS, safePrimary } from './config.js';
+import { Ordnance, HeavyPickups } from './ordnance.js';
 import { settings } from './settings.js';
 import { cellToWorld } from './map.js';
 import { DEG, rand, pick, shuffle, clamp, lerp, damp, rayAABB } from './utils.js';
@@ -69,6 +70,8 @@ export class Game {
     this.wind = new Wind();
     this.windHud = new WindIndicator();
     this.socks = [];
+    this.ordnance = new Ordnance(this); // foguetes e explosões
+    this.pickups = null; // foto do professor (minigun) e caixa de armamento (bazuca)
   }
 
   // Vento da partida e birutas do mapa (sempre ligadas ao mesmo estado de vento)
@@ -105,8 +108,8 @@ export class Game {
     const pTeam = mode === 'ffa' ? 'P' : room && mode === 'team' ? room.hostTeam : 'A';
     const story = mode === 'story';
     this.player = new Player({ id: 0, name: story ? AGENT.name : playerName(), team: pTeam, color: mode === 'ffa' ? FFA_COLORS[0] : TEAMS[pTeam].color });
-    if (story) this.player.setLoadout('kestrel', 'vp9', false, 'katana'); // equipamento padrão da unidade
-    else this.player.setLoadout(settings.loadout.primary, settings.loadout.secondary, mode === 'training', settings.loadout.melee);
+    if (story) this.player.setLoadout(this.config.storyWeapon || 'kestrel', 'vp9', false, 'katana'); // equipamento da unidade (ou arma pesada escolhida)
+    else this.player.setLoadout(safePrimary(settings.loadout.primary, mode), settings.loadout.secondary, mode === 'training', settings.loadout.melee);
     if (mode === 'range') {
       // Centro de Treinamento: só o jogador, alvos de aço e bambus
       this.training = new Training(this, this.config);
@@ -193,6 +196,8 @@ export class Game {
       for (const b of this.bots) this.respawn(b);
       this.announce(mode === 'ffa' ? 'MATA-MATA' : 'TREINAMENTO', mode === 'ffa' ? `Primeiro a ${this.config.scoreLimit} ${this.config.scoreLimit === 1 ? 'eliminação' : 'eliminações'} vence` : 'Pressione B para trocar de armas a qualquer momento', 3, null, 'roundStart');
     }
+    // partidas (equipe e mata-mata): a foto do professor e a caixa de armamento
+    if (mode === 'team' || mode === 'ffa') this.pickups = new HeavyPickups(this);
     this.active = true;
     this.paused = false;
     this.setupWind();
@@ -200,6 +205,9 @@ export class Game {
   }
 
   cleanup() {
+    if (this.pickups) { this.pickups.dispose(); this.pickups = null; }
+    this.ordnance.clear();
+    for (const c of this.combatants) { c.heavy = null; c.heavyPrev = null; }
     for (const s of this.socks) s.dispose();
     this.socks = [];
     if (this.story) { this.story.dispose(); this.story = null; }
@@ -220,7 +228,7 @@ export class Game {
     this.effects.clear();
     if (this.pendingLoadout) {
       const { primary, secondary, melee } = this.pendingLoadout;
-      this.player.setLoadout(primary, secondary, false, melee);
+      this.player.setLoadout(safePrimary(primary, this.config.mode), secondary, false, melee);
       this.pendingLoadout = null;
     }
     for (const team of ['A', 'B']) {
@@ -326,7 +334,8 @@ export class Game {
 
   respawn(c) {
     if (c.isPlayer && this.pendingLoadout) {
-      c.setLoadout(this.pendingLoadout.primary, this.pendingLoadout.secondary, this.config.mode === 'training', this.pendingLoadout.melee);
+      c.setLoadout(safePrimary(this.pendingLoadout.primary, this.config.mode), this.pendingLoadout.secondary, this.config.mode === 'training', this.pendingLoadout.melee);
+      c.heavy = null; c.heavyPrev = null;
       this.pendingLoadout = null;
     }
     const s = this.findSpawn(c);
@@ -522,6 +531,7 @@ export class Game {
   playerFire(p) {
     const w = p.weapon;
     const def = w.def;
+    if (def.rocket) { this.rocketFire(p); return; }
     const spread = w.spread(p.speed, !p.onGround, p.crouchT > 0.5, p.ads > 0.6, p.zoomLevel > 0 && this.scopeT > 0.85);
     w.fire();
     p.shots++;
@@ -567,12 +577,36 @@ export class Game {
     const sway = w.shotsFired > 3 ? Math.sin(w.shotsFired * 0.65) * def.recoilH : 0;
     p.recoilYaw += (sway + (Math.random() - 0.5) * def.recoilH) * postureK;
     p.recoilYaw = clamp(p.recoilYaw, -6, 6);
-    this.audio.shot(def.sound, null, 1);
+    if (!def.spin || w.shotsFired % 2) this.audio.shot(def.sound, null, 1);
     if (def.model.type === 'shotgun') this.audio.pump();
     if (def.model.type === 'sniper') this.audio.bolt();
     this.viewmodel.fire();
     this.effects.playerMuzzleLight(muzzleCopy, !!def.beam);
     p.spottedUntil = this.time + 1.2;
+    this.noise(_o, 50, p);
+  }
+
+  // Bazuca: o foguete sai do ombro na direção da mira (o anfitrião cria o foguete do convidado).
+  rocketFire(p) {
+    const w = p.weapon;
+    const def = w.def;
+    const spread = w.spread(p.speed, !p.onGround, p.crouchT > 0.5, p.ads > 0.6, false);
+    w.fire();
+    p.shots++;
+    p.spawnProtect = 0;
+    p.eyePos(_o);
+    forward(p.yaw + p.recoilYaw * DEG, p.pitch + p.recoilPitch * DEG, _base);
+    this.spreadDir(_base, spread, _d);
+    _r.crossVectors(_d, UP).normalize();
+    _o.addScaledVector(_r, 0.12).addScaledVector(UP, -0.06);
+    if (this.isClient) this.net.toHost({ t: 'fire', o: [_o.x, _o.y, _o.z], d: [[_d.x, _d.y, _d.z]], w: def.id });
+    else this.ordnance.launch(p, _o.clone(), _d.clone(), def);
+    if (this.isClient) this.audio.rocketLaunch(null);
+    p.recoilPitch = Math.min(14, p.recoilPitch + def.recoil);
+    p.recoilYaw += (Math.random() - 0.5) * def.recoilH;
+    p.shake = Math.min(1.2, (p.shake || 0) + 0.35);
+    this.viewmodel.fire(1.6);
+    p.spottedUntil = this.time + 1.5;
     this.noise(_o, 50, p);
   }
 
@@ -703,6 +737,7 @@ export class Game {
 
   kill(victim, attacker, def, headshot) {
     victim.alive = false;
+    if (this.pickups) this.pickups.onDeath(victim);
     victim.deaths++;
     victim.deathTime = this.time;
     victim.vel.set(0, 0, 0);
@@ -787,6 +822,8 @@ export class Game {
     }
     if (this.story) this.story.update(dt);
     if (this.training) this.training.update(dt);
+    this.ordnance.update(dt);
+    if (this.pickups) this.pickups.update(dt);
     for (const c of this.combatants) {
       if (c.pendingMelee) {
         c.pendingMelee.t -= dt;
@@ -850,8 +887,9 @@ export class Game {
       speed: p.speed, sprint: p.sprinting, sprintBlend: p.sprintBlend, ads: Math.max(p.ads, Math.min(1, this.scopeT * 1.6)), crouch: p.crouchT > 0.5,
       reload: p.weapon.reloading ? p.weapon.reloadProgress : null,
       mdx: this.input.mouse.dx, mdy: this.input.mouse.dy, onGround: p.onGround,
-      scoped: this.scopeT > 0.62, alive: p.alive, empty: p.weapon.mag === 0 && !p.weapon.def.melee,
+      scoped: this.scopeT > 0.62, alive: p.alive, empty: p.weapon.mag === 0 && !p.weapon.def.melee, spin: p.weapon.spinT || 0,
     });
+    if (!p.alive || !p.weapon.def.spin) this.audio.spin(0);
     this.effects.update(dt);
     this.wind.update(dt);
     for (const s of this.socks) s.update(dt, this.wind);

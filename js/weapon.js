@@ -13,7 +13,24 @@ export class WeaponInstance {
     this.sinceShot = 10;
     this.triggerReleased = true;
     this.infinite = false;
+    // minigun: rotação do feixe de canos (0 a 1) e temperatura (0 a 1; trava ao chegar em 1)
+    this.spinT = 0;
+    this.heat = 0;
+    this.overheated = false;
   }
+
+  // Gira o mecanismo (want = gatilho ou botão direito pressionado) e esfria os canos.
+  updateSpin(dt, want) {
+    const sp = this.def.spin, ht = this.def.heat;
+    if (!sp) return;
+    this.spinT = want ? Math.min(1, this.spinT + dt / sp.up) : Math.max(0, this.spinT - dt / sp.down);
+    if (ht) {
+      if (this.sinceShot > 0.12) this.heat = Math.max(0, this.heat - ht.cool * dt * (this.overheated ? 1.4 : 1));
+      if (this.overheated && this.heat <= 0.25) this.overheated = false;
+    }
+  }
+
+  get spunUp() { return !this.def.spin || (this.spinT >= 0.98 && !this.overheated); }
 
   update(dt) {
     if (this.cooldown > 0) this.cooldown -= dt;
@@ -45,6 +62,10 @@ export class WeaponInstance {
     this.shotsFired++;
     this.sinceShot = 0;
     this.spreadAdd = Math.min(this.def.maxSpread, this.spreadAdd + this.def.perShot);
+    if (this.def.heat) {
+      this.heat = Math.min(1, this.heat + this.def.heat.perShot);
+      if (this.heat >= 1) this.overheated = true;
+    }
   }
 
   startReload() {
@@ -82,6 +103,9 @@ export class WeaponInstance {
     this.cooldown = 0;
     this.spreadAdd = 0;
     this.shotsFired = 0;
+    this.spinT = 0;
+    this.heat = 0;
+    this.overheated = false;
   }
 
   get empty() {
