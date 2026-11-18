@@ -697,3 +697,25 @@ body.touch #pk-prompt { bottom: auto; top: 24%; font-size: 12px; }
 
 .pf-row.dim > div { opacity: 0.45; }
 .chips button:disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+
+/* ranking e experiência */
+.rk-me { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: center; padding: 12px 14px; margin-bottom: 10px; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.03); }
+.rk-me .lv { grid-row: span 2; display: grid; place-items: center; width: 64px; height: 64px; border: 2px solid var(--accent); font-family: var(--head); font-size: 26px; color: var(--accent); }
+.rk-me .lv small { display: block; font-size: 10px; letter-spacing: 0.16em; color: var(--muted); text-align: center; }
+.rk-me .nm { font-family: var(--head); font-size: 18px; }
+.rk-me .bar, .ex-bar { height: 8px; background: rgba(255, 255, 255, 0.1); }
+.rk-me .bar i, .ex-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), #ffd166); transition: width 0.8s ease; }
+.rk-me .sub { font-size: 12px; color: var(--muted); grid-column: 2; }
+.rk-status { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.rk-status.err { color: #ff8a7a; }
+.rk-table-wrap { max-height: 46vh; overflow-y: auto; border: 1px solid var(--line); }
+.rk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rk-table th { position: sticky; top: 0; background: #14171b; text-align: left; padding: 7px 10px; font-family: var(--head); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.rk-table td { padding: 6px 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.rk-table tr.me td { background: rgba(255, 138, 61, 0.14); color: #fff; }
+.rk-table tr:nth-child(-n+3) td:first-child { color: #ffd166; font-weight: 700; }
+.end-xp { max-width: 520px; margin: 4px auto 14px; padding: 10px 14px; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.03); }
+.end-xp .ex-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.end-xp b { font-family: var(--head); font-size: 20px; color: #ffd166; }
+.end-xp span { font-family: var(--head); font-size: 13px; letter-spacing: 0.08em; color: var(--muted); }
+.end-xp p { margin: 6px 0 0; font-size: 12px; color: var(--muted); }

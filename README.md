@@ -194,6 +194,19 @@ O uniforme em si (colete, cinto, coturnos, luvas e as cores da equipe) é igual 
 
 O apelido aparece no placar e no feed de eliminações e é o nome usado nas salas multijogador (um apelido recusado vira "Jogador N"). Os bots usam codinomes de bichos do Brasil (Raposa, Coruja, Jaguar…), com número quando há muitos ("Lobo 2"). No multijogador, a aparência de cada jogador é enviada aos outros.
 
+## Níveis e ranking TOP 100
+
+Cada partida concluída rende pontos: a missão cumprida vale a pontuação do relatório; o desafio do estande vale os pontos × 5, e o do dojô, os pontos; nas partidas (equipe ou mata-mata, contra bots ou no multijogador), cada eliminação vale 50, na cabeça mais 25, e a vitória 300. Missões falhadas, treino livre e partidas abandonadas não contam. Os pontos somam o **nível** (500 pontos para o nível 2, 2.000 para o 3, 4.500 para o 4…), salvo no aparelho e mostrado no menu e no fim de cada partida.
+
+Com perfil criado, os pontos também vão para o **Ranking** (menu principal), que mostra os 100 primeiros com apelido, nível, pontos e partidas. O ranking usa um banco de dados no Supabase:
+
+- O jogo usa só a chave pública (anon), que permite chamar três funções do banco e nada mais; a tabela não pode ser lida nem alterada diretamente.
+- O servidor valida cada envio: limite por partida (história 6.000, treino 4.000, partidas 6.000), no máximo 120 pontos por segundo de jogo, um envio a cada 20 segundos e apelido válido.
+- Cada aparelho tem um identificador e um segredo aleatórios; só o hash do segredo fica no servidor, então ninguém altera nem apaga o registro de outra pessoa. Em **Ranking → Remover meus dados do ranking**, a pessoa apaga o próprio registro.
+- Como o jogo roda no navegador, alguém com conhecimento técnico ainda pode forjar pontuações dentro desses limites; registros suspeitos podem ser apagados no painel do Supabase (Table Editor → ranking).
+
+**Ativação:** execute o script `supabase/ranking.sql` no painel do projeto (SQL Editor → New query → Run) e preencha `SUPABASE_ANON_KEY` em `js/ranking.js` com a chave pública (Project Settings → API). Sem a chave, o jogo funciona normalmente e o ranking aparece como não ativado.
+
 ## Mapas
 
 A tela **Jogar** (e a sala cooperativa) permite escolher entre quatro mapas, todos com 72 × 72 m e bases simétricas:
@@ -295,6 +308,8 @@ js/guns.js          modelos detalhados das armas (perfis extrudados, materiais, 
 js/rifles.js        modelos dos rifles M82, SVD-63, Espectro e Horizonte
 js/heavy.js         modelos da Minigun M134 (canos giratórios) e da bazuca
 js/ordnance.js      foguetes, explosões, foto do professor e caixa de armamento
+js/ranking.js       pontos, níveis e ranking TOP 100 (Supabase)
+supabase/ranking.sql tabela e funções do ranking (executar no painel do Supabase)
 js/preview.js       prévia 3D das armas no arsenal
 js/models.js        modelos dos personagens (rosto, olhos, cabelo, farda)
 js/profiles.js      perfil do jogador (apelido, validação, aparência) e camuflagens

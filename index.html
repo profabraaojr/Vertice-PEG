@@ -86,6 +86,7 @@
           <button class="btn big" data-action="quick-training">Treinamento rápido</button>
           <button class="btn big" data-action="training" id="btn-training">Centro de treinamento</button>
           <button class="btn big" data-action="profile">Perfil</button>
+          <button class="btn big" data-action="ranking">Ranking</button>
           <button class="btn big" data-action="loadout">Arsenal</button>
           <button class="btn big" data-action="settings">Configurações</button>
           <button class="btn big" data-action="controls">Controles</button>
@@ -549,10 +550,27 @@
     </section>
 
     <!-- fim de partida -->
+    <section class="screen" id="screen-ranking">
+      <div class="panel wide">
+        <header class="panel-head"><h2>Ranking TOP 100</h2><p>Pontos de missões, desafios do centro de treinamento e partidas. Aparecem só o apelido, o nível e os pontos.</p></header>
+        <div class="rk-me" id="rk-me"></div>
+        <p class="rk-status" id="rk-status"></p>
+        <div class="rk-table-wrap"><table class="rk-table"><thead><tr><th>#</th><th>Apelido</th><th>Nível</th><th>Pontos</th><th>Partidas</th></tr></thead><tbody id="rk-body"></tbody></table></div>
+        <p class="muted small">Como pontuar: missão cumprida vale a pontuação do relatório; desafio do estande vale os pontos × 5, e o do dojô, os pontos; nas partidas, cada eliminação vale 50, na cabeça mais 25, e a vitória 300. O treino livre não conta. Os pontos sobem o nível neste aparelho; com perfil criado, vão também para o ranking.</p>
+        <footer class="panel-foot">
+          <button class="btn" data-action="back">Voltar</button>
+          <button class="btn" id="rk-delete">Remover meus dados do ranking</button>
+          <div class="grow"></div>
+          <button class="btn primary" id="rk-refresh">Atualizar</button>
+        </footer>
+      </div>
+    </section>
+
     <section class="screen" id="screen-end">
       <div class="panel wide">
         <header class="panel-head center"><h2 id="end-title"></h2><p id="end-sub"></p></header>
         <div class="end-stats" id="end-stats"></div>
+        <div class="end-xp hidden" id="end-xp"><div class="ex-top"><b id="ex-points"></b><span id="ex-level"></span></div><div class="ex-bar"><i id="ex-fill"></i></div><p id="ex-note"></p></div>
         <div id="end-board" class="end-board"></div>
         <footer class="panel-foot">
           <button class="btn" data-action="quit">Menu principal</button>

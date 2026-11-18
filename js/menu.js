@@ -7,6 +7,7 @@ import { pwa, isStandalone, platform, promptInstall } from './pwa.js';
 import { CAMPAIGN, missionById, storyProgress } from './story.js';
 import { isTouchDevice } from './touch.js';
 import { trainingBest } from './training.js';
+import { progress, reportMatch, fetchTop100, deleteMine, rankingConfigured } from './ranking.js';
 import { SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, HEADGEAR, FACEGEAR, GEAR_COLORS, gearConflict, getLook, defaultLook, sanitizeLook, activeProfile, camoCanvas, cleanNickname, nicknameProblem, saveProfile, deleteProfile } from './profiles.js';
 import { SCHOOL, CLASSES } from './homage.js';
 
@@ -66,6 +67,7 @@ export class Menu {
     switch (a) {
       case 'play': this.show('screen-play'); break;
       case 'profile': this.openProfiles(); break;
+      case 'ranking': this.openRanking(); break;
       case 'install': this.openInstall(); break;
       case 'story': if (app.state === 'ended') app.quitToMenu(); this.openStory(); break;
       case 'story-start': this.startStory(); break;
@@ -517,7 +519,8 @@ export class Menu {
 
   updateProfileLabel() {
     const p = activeProfile();
-    $('current-profile').textContent = p ? `Perfil: ${p}` : 'Sem perfil · clique em Perfil para criar o seu';
+    const lv = progress().level;
+    $('current-profile').textContent = p ? `Perfil: ${p} · nível ${lv}` : `Sem perfil · clique em Perfil para criar o seu · nível ${lv}`;
   }
 
   // ---------- multijogador (a lógica fica em lobby.js) ----------
@@ -652,7 +655,71 @@ export class Menu {
     this.reset('screen-end');
   }
 
+  // pontos da partida: soma no aparelho e envia ao ranking (uma vez por partida)
+  showXp(r) {
+    const box = $('end-xp');
+    box.classList.add('hidden');
+    if (r._xp) return;
+    r._xp = true;
+    reportMatch(r).then((o) => {
+      if (!o.points) return;
+      box.classList.remove('hidden');
+      $('ex-points').textContent = `+${o.points.toLocaleString('pt-BR')} pontos`;
+      const up = o.after.level > o.before.level;
+      $('ex-level').textContent = up ? `SUBIU PARA O NÍVEL ${o.after.level}!` : `NÍVEL ${o.after.level}`;
+      $('ex-level').style.color = up ? '#6dff9e' : '';
+      const fill = $('ex-fill');
+      fill.style.width = `${Math.round((up ? 0 : o.before.frac) * 100)}%`;
+      requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = `${Math.round(o.after.frac * 100)}%`; }));
+      const rest = `${(o.after.next - o.after.xp).toLocaleString('pt-BR')} pontos para o nível ${o.after.level + 1}`;
+      $('ex-note').textContent = o.sent ? `${rest} · ranking: ${o.pos}º lugar` : o.reason === 'noprofile' ? `${rest} · crie um perfil para entrar no ranking` : o.error ? `${rest} · ranking indisponível agora (${o.error})` : rest;
+      this.updateProfileLabel();
+    });
+  }
+
+  // ---------- ranking ----------
+  async openRanking() {
+    if (this.current !== 'screen-ranking') this.show('screen-ranking');
+    const pr = progress();
+    const nick = activeProfile();
+    $('rk-me').innerHTML = `<div class="lv"><div>${pr.level}<small>NÍVEL</small></div></div><div class="nm"></div><div class="bar"><i style="width:${Math.round(pr.frac * 100)}%"></i></div><div class="sub"></div>`;
+    $('rk-me').querySelector('.nm').textContent = nick || 'Sem perfil';
+    $('rk-me').querySelector('.sub').textContent = `${pr.xp.toLocaleString('pt-BR')} pontos · faltam ${(pr.next - pr.xp).toLocaleString('pt-BR')} para o nível ${pr.level + 1}`;
+    const st = $('rk-status');
+    st.classList.remove('err');
+    const body = $('rk-body');
+    body.innerHTML = '';
+    $('rk-delete').classList.toggle('hidden', !settings.rankId);
+    if (!rankingConfigured()) { st.textContent = 'O ranking on-line ainda não foi ativado neste jogo. Seus pontos e seu nível continuam contando neste aparelho.'; return; }
+    st.textContent = nick ? 'Carregando…' : 'Carregando… (crie um perfil para aparecer no ranking)';
+    if (!this.rkBound) {
+      this.rkBound = true;
+      $('rk-refresh').addEventListener('click', () => this.openRanking());
+      $('rk-delete').addEventListener('click', async () => {
+        if (!window.confirm('Remover seu apelido e seus pontos do ranking on-line? O nível neste aparelho continua.')) return;
+        try { await deleteMine(); this.app.toast('Seus dados foram removidos do ranking.'); } catch (e) { this.app.toast(`Não foi possível remover agora: ${e.message}`); }
+        this.openRanking();
+      });
+    }
+    try {
+      const rows = await fetchTop100();
+      if (this.current !== 'screen-ranking') return;
+      if (!rows || !rows.length) { st.textContent = 'Ninguém pontuou ainda. Seja o primeiro!'; return; }
+      st.textContent = `${rows.length} ${rows.length === 1 ? 'jogador' : 'jogadores'} no ranking.${nick ? '' : ' Crie um perfil para aparecer aqui.'}`;
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        if (nick && r.nickname === nick) tr.className = 'me';
+        for (const v of [`${r.pos}º`, r.nickname, r.level, Number(r.score).toLocaleString('pt-BR'), r.matches]) { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); }
+        body.appendChild(tr);
+      }
+    } catch (e) {
+      st.textContent = `Não foi possível carregar o ranking agora (${e.message}). Tente de novo em instantes.`;
+      st.classList.add('err');
+    }
+  }
+
   showEnd(r) {
+    this.showXp(r);
     $('end-story').classList.add('hidden');
     $('end-story').dataset.action = 'story';
     $('end-restart').textContent = 'Jogar novamente';
