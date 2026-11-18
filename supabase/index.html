@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ativar ranking</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --bg: #0e1013; --panel: #171a1f; --line: #2b3038; --text: #e8ecef; --muted: #9aa3ad; --accent: #ff8a3d; --ok: #6dff9e; --err: #ff8a7a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 18px 16px 40px; }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: 0.04em; }
+  p { margin: 6px 0 12px; color: var(--muted); }
+  ol { padding-left: 20px; margin: 8px 0 16px; }
+  li { margin: 6px 0; }
+  .btn { display: block; width: 100%; padding: 14px; margin: 10px 0; font: 600 16px system-ui, sans-serif; text-align: center; text-decoration: none; color: #17100a; background: var(--accent); border: 0; border-radius: 6px; cursor: pointer; }
+  .btn.sec { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  textarea { width: 100%; height: 220px; padding: 10px; font: 12px/1.4 ui-monospace, Menlo, monospace; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .status { padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  .status.ok { border-color: var(--ok); color: var(--ok); }
+  .status.err { border-color: var(--err); color: var(--err); }
+</style>
+</head>
+<body>
+<main>
+  <h1>VÉRTICE · ativar o ranking TOP 100</h1>
+  <p>Página de apoio para executar o script do banco de dados no Supabase pelo celular.</p>
+  <div class="status" id="status">Verificando o ranking…</div>
+  <ol>
+    <li>Toque em <b>Copiar script</b>.</li>
+    <li>Toque em <b>Abrir o editor SQL</b> (abre o projeto no Supabase, já logado).</li>
+    <li>Cole o script no editor e toque em <b>Run</b>. Deve aparecer "Success. No rows returned".</li>
+    <li>Volte aqui e toque em <b>Verificar de novo</b>.</li>
+  </ol>
+  <button class="btn" id="copy">Copiar script</button>
+  <a class="btn sec" href="https://supabase.com/dashboard/project/wqdojkjwsiasnntaedsl/sql/new" target="_blank" rel="noopener">Abrir o editor SQL do projeto</a>
+  <button class="btn sec" id="check">Verificar de novo</button>
+  <p>Script (o mesmo do botão Copiar):</p>
+  <textarea id="sql" readonly spellcheck="false">Carregando…</textarea>
+</main>
+<script>
+  const URL_ = 'https://wqdojkjwsiasnntaedsl.supabase.co';
+  const KEY = 'sb_publishable_7mCiRxHz3X98K-w3TEFxiA_tjRMNWl-';
+  const $ = (id) => document.getElementById(id);
+  fetch('ranking.sql', { cache: 'no-store' }).then((r) => r.text()).then((t) => { $('sql').value = t; }).catch(() => { $('sql').value = 'Não foi possível carregar o script.'; });
+  $('copy').onclick = async () => {
+    const t = $('sql').value;
+    try { await navigator.clipboard.writeText(t); }
+    catch (e) { $('sql').focus(); $('sql').select(); document.execCommand('copy'); }
+    $('copy').textContent = 'Script copiado ✓';
+    setTimeout(() => { $('copy').textContent = 'Copiar script'; }, 2500);
+  };
+  async function check() {
+    const st = $('status');
+    st.className = 'status';
+    st.textContent = 'Verificando o ranking…';
+    try {
+      const r = await fetch(`${URL_}/rest/v1/rpc/ranking_top100`, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: '{}' });
+      const d = await r.json().catch(() => null);
+      if (r.ok) { st.className = 'status ok'; st.textContent = `Ranking ativo ✓ (${Array.isArray(d) ? d.length : 0} jogadores). Pode fechar esta página.`; }
+      else if (d && d.code === 'PGRST202') { st.className = 'status err'; st.textContent = 'O script ainda não foi executado no banco. Siga os passos abaixo.'; }
+      else { st.className = 'status err'; st.textContent = `Resposta inesperada do servidor: ${(d && d.message) || r.status}`; }
+    } catch (e) { st.className = 'status err'; st.textContent = `Sem conexão com o servidor: ${e.message}`; }
+  }
+  $('check').onclick = check;
+  check();
+</script>
+</body>
+</html>

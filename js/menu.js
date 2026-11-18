@@ -713,8 +713,8 @@ export class Menu {
         body.appendChild(tr);
       }
     } catch (e) {
-      st.textContent = `Não foi possível carregar o ranking agora (${e.message}). Tente de novo em instantes.`;
-      st.classList.add('err');
+      st.textContent = e.pending ? 'O ranking on-line está em preparação e abre em breve. Seus pontos e seu nível já contam neste aparelho.' : `Não foi possível carregar o ranking agora (${e.message}). Tente de novo em instantes.`;
+      if (!e.pending) st.classList.add('err');
     }
   }
 

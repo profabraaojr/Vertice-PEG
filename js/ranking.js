@@ -10,7 +10,7 @@ import { settings, saveSettings } from './settings.js';
 import { activeProfile } from './profiles.js';
 
 export const SUPABASE_URL = 'https://wqdojkjwsiasnntaedsl.supabase.co';
-export const SUPABASE_ANON_KEY = '';
+export const SUPABASE_ANON_KEY = 'sb_publishable_7mCiRxHz3X98K-w3TEFxiA_tjRMNWl-';
 
 export const rankingConfigured = () => !!SUPABASE_ANON_KEY;
 
@@ -72,7 +72,12 @@ async function rpc(name, body) {
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
-  if (!res.ok) throw new Error((data && data.message) || `erro ${res.status}`);
+  if (!res.ok) {
+    const err = new Error((data && data.message) || `erro ${res.status}`);
+    // função ainda não criada no banco (script supabase/ranking.sql não executado)
+    if (data && data.code === 'PGRST202') { err.pending = true; err.message = 'ranking em preparação'; }
+    throw err;
+  }
   return data;
 }
 

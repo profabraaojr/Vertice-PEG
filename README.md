@@ -205,7 +205,7 @@ Com perfil criado, os pontos também vão para o **Ranking** (menu principal), q
 - Cada aparelho tem um identificador e um segredo aleatórios; só o hash do segredo fica no servidor, então ninguém altera nem apaga o registro de outra pessoa. Em **Ranking → Remover meus dados do ranking**, a pessoa apaga o próprio registro.
 - Como o jogo roda no navegador, alguém com conhecimento técnico ainda pode forjar pontuações dentro desses limites; registros suspeitos podem ser apagados no painel do Supabase (Table Editor → ranking).
 
-**Ativação:** execute o script `supabase/ranking.sql` no painel do projeto (SQL Editor → New query → Run) e preencha `SUPABASE_ANON_KEY` em `js/ranking.js` com a chave pública (Project Settings → API). Sem a chave, o jogo funciona normalmente e o ranking aparece como não ativado.
+**Ativação:** a chave pública já está em `js/ranking.js`. Falta executar o script `supabase/ranking.sql` no painel do projeto (SQL Editor → New query → Run); pelo celular, a página `supabase/` do site (https://profabraaojr.github.io/Vertice-PEG/supabase/) tem um botão para copiar o script, um link direto para o editor SQL e uma verificação do ranking. Até lá, o ranking aparece como "em preparação".
 
 ## Mapas
 
