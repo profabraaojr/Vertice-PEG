@@ -53,7 +53,7 @@ Publicar nas lojas (Google Play e App Store) é possível a partir desta mesma v
 
 ### Atualizar o jogo publicado
 
-Envie as alterações para a branch `main`. O fluxo `.github/workflows/publicar.yml` copia a `main` para a branch `gh-pages`, de onde o GitHub Pages publica o site. A nova versão aparece no endereço em um ou dois minutos. Se o navegador ainda mostrar a versão antiga, recarregue com Ctrl+F5.
+Envie as alterações para a branch `main`. O fluxo `.github/workflows/publicar.yml` publica a `main` pelo deploy oficial do GitHub Pages (fonte: "GitHub Actions"), sem permissão de escrita no repositório. A nova versão aparece no endereço em um ou dois minutos. Se o navegador ainda mostrar a versão antiga, recarregue com Ctrl+F5.
 
 ## Como executar
 
@@ -260,7 +260,7 @@ Proteções em vigor (revisadas na verificação de segurança do projeto):
 - **Multijogador (o anfitrião é a autoridade):** cada mensagem de um convidado é conferida. Números inválidos e mensagens grandes demais são descartados. Os disparos respeitam a cadência e o pente de cada arma, e só valem com as armas do equipamento do convidado (ou com a arma pesada que ele pegou). O deslocamento é limitado à velocidade máxima de corrida, sem teletransporte, e as trocas de armas aceitam só armas existentes, cada uma na sua categoria.
 - **Nomes e chat:** o nome de quem entra na sala passa pelo mesmo filtro do apelido (um nome recusado vira "Jogador N"); no chat, palavras ofensivas viram asteriscos, e cada convidado envia no máximo uma mensagem por segundo (cinco a cada dez segundos).
 - **Ranking:** o servidor valida cada envio (ver *Níveis e ranking TOP 100*): limite por partida, no máximo 120 pontos por segundo medidos pelo relógio do servidor, 60.000 pontos por dia por jogador, 60 jogadores novos por hora, apelidos ofensivos recusados e o registro de cada aparelho protegido por um segredo próprio.
-- **Publicação e dependências:** os workflows usam ações fixadas pelo código da versão; o Dependabot verifica semanalmente as dependências npm e as ações (`.github/dependabot.yml`); o CodeQL analisa o código a cada envio (`.github/workflows/codeql.yml`); as bibliotecas em `vendor/` conferem com os pacotes oficiais do npm (`sha256sum -c vendor/CHECKSUMS`, dentro da pasta `vendor`).
+- **Publicação e dependências:** o site é publicado pelo deploy oficial do GitHub Pages, sem permissão de escrita no repositório; os workflows usam ações fixadas pelo código da versão; o Dependabot verifica semanalmente as dependências npm e as ações (`.github/dependabot.yml`); o CodeQL analisa o código a cada envio (`.github/workflows/codeql.yml`); as bibliotecas em `vendor/` conferem com os pacotes oficiais do npm (`sha256sum -c vendor/CHECKSUMS`, dentro da pasta `vendor`).
 - **Política de segurança de conteúdo (CSP):** o `index.html` só executa scripts do próprio site e só se conecta ao ranking (Supabase) e às salas (PeerJS); o arquivo único `dist/vertice.html` não usa essa política, porque tem os scripts embutidos.
 - **Moderação do ranking:** jogadores podem ser bloqueados pela tabela `ranking_ban`; os comandos estão no fim de `supabase/ranking.sql`.
 - **Relato de vulnerabilidades:** veja `SECURITY.md` (relato privado, nunca em issue pública).

@@ -1,5 +1,6 @@
-# Publicação automática: a cada envio para a branch main, copia o conteúdo
-# para a branch gh-pages, que é a fonte do GitHub Pages deste repositório.
+# Publicação automática no GitHub Pages pelo deploy oficial (fonte do Pages: "GitHub Actions").
+# A cada envio para a main, empacota os arquivos do site e publica, sem permissão de escrita no
+# repositório: o workflow só lê o código e grava no Pages.
 name: Publicar no GitHub Pages
 
 on:
@@ -8,7 +9,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: publicar-pages
@@ -17,9 +20,14 @@ concurrency:
 jobs:
   publicar:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 (fixado pelo código da versão)
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
-          fetch-depth: 0
-      - name: Atualizar a branch gh-pages com a main
-        run: git push --force origin HEAD:gh-pages
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
