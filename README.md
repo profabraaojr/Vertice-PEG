@@ -182,7 +182,13 @@ Os recordes dos desafios ficam salvos no aparelho.
 
 - apelido de 2 a 16 caracteres (letras, números, espaço, ponto, hífen e sublinhado); palavrões e ofensas comuns são recusados, porque o apelido aparece para os outros jogadores;
 - tom de pele (7 opções), cor dos olhos (6), estilo de cabelo (8) e cor do cabelo (6);
-- camuflagem da farda (6: mata, deserto, urbano, digital, tigrado e noturno).
+- camuflagem da farda (6: mata, deserto, urbano, digital, tigrado e noturno);
+- **cabeça:** nenhum, capacete tático (com trilhos e suporte para visão noturna), capacete antidistúrbio (com viseira e proteção de nuca), capacete clássico ou capuz de fleece com gola alta;
+- **rosto:** nenhum, balaclava, máscara de tela ou máscara de gás (com dois filtros laterais e válvula central);
+- **cor do equipamento** (5: preto, azul-marinho, cinza, verde-oliva e areia);
+- **sigla SWAT** opcional no colete (costas e peito) e, com o capacete antidistúrbio, na viseira.
+
+Todas as peças ficam livres desde o início. São só visuais: não protegem e não aparecem na visão em primeira pessoa. A máscara de gás não encaixa com o capuz nem com o capacete antidistúrbio (o editor bloqueia a combinação), e o cabelo fica escondido sob capacete, capuz ou balaclava. Metade dos bots também usa capacete ou máscara.
 
 O uniforme em si (colete, cinto, coturnos, luvas e as cores da equipe) é igual para todos; a camuflagem muda só a estampa da farda e das mangas. O personagem aparece em 3D, girando, com um close do rosto. O perfil fica salvo só no navegador do aparelho e pode ser apagado a qualquer momento. Perfis de versões anteriores com nomes dos alunos são apagados automaticamente.
 

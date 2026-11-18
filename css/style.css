@@ -694,3 +694,6 @@ body.story #wind-hud { bottom: 100px; }
 #pk-prompt { position: absolute; left: 50%; bottom: 28%; transform: translateX(-50%); padding: 8px 14px; background: rgba(8, 10, 13, 0.72); border: 1px solid rgba(255, 192, 74, 0.6); font-family: var(--head); font-size: 14px; letter-spacing: 0.04em; color: #f3e6c8; white-space: nowrap; z-index: 3; pointer-events: none; }
 #pk-prompt b { display: inline-block; min-width: 22px; padding: 1px 6px; margin-right: 8px; background: #ffc04a; color: #17120a; text-align: center; }
 body.touch #pk-prompt { bottom: auto; top: 24%; font-size: 12px; }
+
+.pf-row.dim > div { opacity: 0.45; }
+.chips button:disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }

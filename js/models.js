@@ -35,6 +35,42 @@ function cyl(parent, r, len, x, y, z, mat) {
 }
 
 
+// geometrias e materiais do equipamento de cabeça
+const domeGeo = new THREE.SphereGeometry(0.15, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2);
+const brimGeo = new THREE.CylinderGeometry(0.168, 0.172, 0.012, 24);
+const visorGeo = new THREE.CylinderGeometry(0.158, 0.158, 0.17, 22, 1, true, Math.PI - 1.15, 2.3);
+let meshM = null;
+function meshMat() {
+  if (meshM) return meshM;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0c0d0e'; ctx.fillRect(0, 0, 64, 64);
+  ctx.fillStyle = '#2b2d30';
+  for (let y = 0; y < 64; y += 6) for (let x = (y / 6) % 2 ? 3 : 0; x < 64; x += 6) { ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 7); ctx.fill(); }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  meshM = new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });
+  return meshM;
+}
+const swatCache = new Map();
+function swatMat(text = 'SWAT') {
+  if (swatCache.has(text)) return swatCache.get(text);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 80;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#16181b'; ctx.fillRect(0, 0, 256, 80);
+  ctx.fillStyle = '#e9ecef';
+  ctx.font = 'bold 58px "Chakra Petch", "Arial Black", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 43);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.6, side: THREE.DoubleSide });
+  swatCache.set(text, m);
+  return m;
+}
+
 // As armas detalhadas ficam em guns.js.
 export { buildGun } from './guns.js';
 
@@ -104,9 +140,13 @@ export class CharacterModel {
       for (const sx of [-1, 1]) box(this.head, 0.03, 0.02, 0.01, sx * 0.045, 0.03, -0.139, stdMat(0x1a1a1a, 0.4, 0));
       box(this.upper, 0.11, 0.08, 0.11, 0, 0.64, 0, stdMat(0x121314, 0.95, 0));
     } else if (look) {
-      this.buildFace(lc, skin);
-      this.buildHair(look.hair, stdMat(lc.hair, 0.85, 0));
-      box(this.upper, 0.11, 0.08, 0.11, 0, 0.64, 0, skin); // pescoço
+      const head = look.head || 'none', face = look.face || 'none';
+      const wrap = face === 'balaclava' || head === 'fleece'; // tecido cobre cabeça e pescoço
+      // rosto: com balaclava, os olhos aparecem pela abertura; boca e nariz só sem máscara
+      this.buildFace(lc, skin, { dz: face === 'balaclava' ? -0.012 : 0, lower: face === 'none' && head !== 'fleece', ears: !wrap && head !== 'antidist' });
+      if (head === 'none' && face !== 'balaclava') this.buildHair(look.hair, stdMat(lc.hair, 0.85, 0));
+      box(this.upper, 0.11, 0.08, 0.11, 0, 0.64, 0, wrap ? stdMat(lc.gear, 0.95, 0) : skin); // pescoço
+      this.buildGear(look, lc, skin);
     } else {
       box(this.head, 0.27, 0.13, 0.29, 0, 0.11, 0.01, teamDark); // capacete
       box(this.head, 0.24, 0.05, 0.03, 0, 0.02, -0.125, stdMat(0x111316, 0.2, 0.8, { emissive: 0x1a3a4a, emissiveIntensity: 0.6 }));
@@ -124,6 +164,16 @@ export class CharacterModel {
       box(this.aim, 0.13, 0.12, 0.14, -0.22, 0.0, 0.0, team);
     }
     if (kind === 'crim') box(this.aim, 0.12, 0.06, 0.12, 0.2, -0.06, -0.06, stdMat(0xb3202a, 0.7, 0)); // braçadeira vermelha da Crakem
+    // sigla SWAT no colete (opção do perfil): costas e peito
+    if (look && look.swat && !kind) {
+      const back = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.09), swatMat());
+      back.position.set(0, 0.4, 0.262); // a face do plano já aponta para trás (+z)
+      this.upper.add(back);
+      const chest = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.05), swatMat());
+      chest.position.set(0, 0.5, -0.162);
+      chest.rotation.y = Math.PI; // vira para a frente (-z)
+      this.upper.add(chest);
+    }
     if (kind === 'crim' || kind === 'civil') {
       box(this.aim, 0.09, 0.09, 0.09, 0.2, -0.07, -0.36, skin);
       box(this.aim, 0.09, 0.09, 0.09, -0.11, -0.09, -0.44, skin);
@@ -144,21 +194,112 @@ export class CharacterModel {
   }
 
   // Rosto: olhos com íris colorida, sobrancelhas, nariz e boca.
-  buildFace(lc, skin) {
+  // o: dz (desloca olhos e sobrancelhas para a frente, sobre uma balaclava), lower (nariz e boca), ears
+  buildFace(lc, skin, o = {}) {
     const h = this.head;
+    const dz = o.dz || 0, lower = o.lower !== false, ears = o.ears !== false;
     const white = stdMat(0xf4f1ea, 0.5, 0);
     const iris = stdMat(lc.eyes, 0.35, 0);
     const brow = stdMat(lc.hair, 0.85, 0);
     const shade = stdMat(new THREE.Color(lc.skin).multiplyScalar(0.82).getHex(), 0.8, 0);
+    if (dz) box(h, 0.17, 0.056, 0.006, 0, 0.034, -0.124 + dz, skin); // abertura dos olhos na balaclava
     for (const sx of [-1, 1]) {
-      box(h, 0.056, 0.03, 0.008, sx * 0.055, 0.03, -0.121, white);
-      box(h, 0.026, 0.03, 0.008, sx * 0.055, 0.03, -0.124, iris);
-      box(h, 0.01, 0.012, 0.008, sx * 0.055, 0.03, -0.127, stdMat(0x0b0b0b, 0.4, 0));
-      box(h, 0.064, 0.011, 0.012, sx * 0.055, 0.058, -0.122, brow);
-      box(h, 0.02, 0.07, 0.05, sx * 0.12, 0.0, 0.0, shade); // orelhas
+      box(h, 0.056, 0.03, 0.008, sx * 0.055, 0.03, -0.121 + dz * 1.15, white);
+      box(h, 0.026, 0.03, 0.008, sx * 0.055, 0.03, -0.124 + dz * 1.15, iris);
+      box(h, 0.01, 0.012, 0.008, sx * 0.055, 0.03, -0.127 + dz * 1.15, stdMat(0x0b0b0b, 0.4, 0));
+      box(h, 0.064, 0.011, 0.012, sx * 0.055, 0.058, -0.122 + dz * 1.15, brow);
+      if (ears) box(h, 0.02, 0.07, 0.05, sx * 0.12, 0.0, 0.0, shade); // orelhas
     }
-    box(h, 0.03, 0.06, 0.03, 0, -0.012, -0.13, shade); // nariz
-    box(h, 0.064, 0.012, 0.008, 0, -0.07, -0.121, stdMat(0x8a3b34, 0.6, 0)); // boca
+    if (lower) {
+      box(h, 0.03, 0.06, 0.03, 0, -0.012, -0.13, shade); // nariz
+      box(h, 0.064, 0.012, 0.008, 0, -0.07, -0.121, stdMat(0x8a3b34, 0.6, 0)); // boca
+    }
+  }
+
+  // Equipamento de cabeça e rosto escolhido no perfil (ver HEADGEAR e FACEGEAR em profiles.js).
+  buildGear(look, lc, skin) {
+    const h = this.head;
+    const head = look.head || 'none', face = look.face || 'none';
+    const cloth = stdMat(lc.gear, 0.95, 0);
+    const hard = stdMat(lc.gear, 0.5, 0.15);
+    const black = stdMat(0x121315, 0.7, 0.1);
+    const rubber = stdMat(0x0d0e0f, 0.85, 0);
+    const glass = stdMat(0x24323c, 0.08, 0.7, { transparent: true, opacity: 0.42 });
+    const dome = (sx, sy, sz, y, mat) => {
+      const m = new THREE.Mesh(domeGeo, mat);
+      m.scale.set(sx, sy, sz);
+      m.position.set(0, y, 0.006);
+      h.add(m);
+      return m;
+    };
+    // ---------- rosto
+    if (face === 'balaclava') box(h, 0.238, 0.272, 0.258, 0, 0, 0, cloth);
+    if (face === 'tela') {
+      box(h, 0.2, 0.125, 0.026, 0, -0.062, -0.124, meshMat());
+      for (const sx of [-1, 1]) box(h, 0.012, 0.02, 0.2, sx * 0.116, -0.04, 0.0, black); // elástico
+    }
+    if (face === 'gas') {
+      box(h, 0.2, 0.105, 0.04, 0, -0.072, -0.13, rubber);
+      box(h, 0.034, 0.07, 0.036, 0, 0.022, -0.134, rubber);
+      for (const sx of [-1, 1]) {
+        box(h, 0.068, 0.058, 0.006, sx * 0.056, 0.03, -0.146, glass);
+        box(h, 0.08, 0.012, 0.03, sx * 0.056, 0.064, -0.135, rubber);
+        box(h, 0.08, 0.012, 0.03, sx * 0.056, -0.004, -0.135, rubber);
+        box(h, 0.012, 0.07, 0.03, sx * 0.1, 0.03, -0.135, rubber);
+        const f = cyl(h, 0.048, 0.035, sx * 0.118, -0.075, -0.13, rubber); // filtros laterais
+        f.rotation.y = sx * 1.1;
+        const fc = cyl(h, 0.04, 0.012, sx * 0.135, -0.075, -0.142, black);
+        fc.rotation.y = sx * 1.1;
+      }
+      cyl(h, 0.036, 0.05, 0, -0.08, -0.168, rubber); // válvula central
+      cyl(h, 0.028, 0.012, 0, -0.08, -0.195, black);
+      box(h, 0.245, 0.024, 0.02, 0, 0.04, 0.124, rubber); // tirante
+    }
+    // ---------- cabeça
+    if (head === 'tatico') {
+      dome(0.86, 0.74, 0.93, 0.045, hard);
+      for (const sx of [-1, 1]) {
+        box(h, 0.012, 0.03, 0.15, sx * 0.13, 0.07, 0.0, black); // trilhos laterais
+        box(h, 0.01, 0.12, 0.012, sx * 0.116, -0.055, -0.02, black); // jugular
+      }
+      box(h, 0.055, 0.042, 0.022, 0, 0.115, -0.135, black); // suporte para óculos de visão noturna
+      box(h, 0.08, 0.035, 0.07, 0, 0.165, 0.01, stdMat(lc.gear, 0.95, 0)); // velcro superior
+    }
+    if (head === 'classico') {
+      dome(0.95, 0.8, 1.02, 0.04, hard);
+      const brim = new THREE.Mesh(brimGeo, hard);
+      brim.position.set(0, 0.045, 0.006);
+      brim.scale.set(1, 1, 1.08);
+      h.add(brim);
+      for (const sx of [-1, 1]) box(h, 0.01, 0.13, 0.012, sx * 0.118, -0.04, -0.01, black);
+      box(h, 0.015, 0.015, 0.008, 0, 0.13, -0.15, stdMat(0x2a2b2d, 0.4, 0.8)); // rebite
+    }
+    if (head === 'antidist') {
+      dome(0.98, 0.95, 1.05, 0.05, hard);
+      box(h, 0.25, 0.1, 0.03, 0, -0.08, 0.14, hard); // proteção da nuca
+      const visor = new THREE.Mesh(visorGeo, glass);
+      visor.position.set(0, -0.005, 0.0);
+      h.add(visor);
+      for (const sx of [-1, 1]) cyl(h, 0.022, 0.02, sx * 0.16, 0.07, -0.02, black).rotation.y = Math.PI / 2; // dobradiças
+      box(h, 0.26, 0.022, 0.03, 0, 0.088, -0.15, black); // aba sobre a viseira
+      if (look.swat) {
+        const t = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.045), swatMat('S.W.A.T.'));
+        t.position.set(0, 0.135, -0.155);
+        t.rotation.set(0.35, Math.PI, 0); // para a frente, inclinado com o casco
+        h.add(t);
+      }
+    }
+    if (head === 'fleece') {
+      box(h, 0.27, 0.07, 0.29, 0, 0.15, 0.02, cloth); // topo do capuz
+      for (const sx of [-1, 1]) box(h, 0.035, 0.31, 0.29, sx * 0.135, 0.0, 0.02, cloth);
+      box(h, 0.27, 0.32, 0.05, 0, 0.0, 0.15, cloth);
+      box(h, 0.27, 0.035, 0.03, 0, 0.115, -0.13, cloth); // borda da abertura
+      box(h, 0.25, 0.14, 0.27, 0, -0.09, 0.0, cloth); // gola alta sobre o nariz
+      for (const sx of [-1, 1]) {
+        box(h, 0.004, 0.09, 0.004, sx * 0.09, -0.13, -0.14, black); // cordão
+        box(h, 0.018, 0.026, 0.018, sx * 0.09, -0.18, -0.14, black); // trava
+      }
+    }
   }
 
   // Cabelo conforme o estilo escolhido (peças presas à cabeça).

@@ -172,7 +172,10 @@ export class Game {
       else if (mode === 'training') { team = 'B'; color = TEAMS.B.color; }
       else { team = `F${i}`; color = FFA_COLORS[(i + 1) % FFA_COLORS.length]; }
       const bname = names[i % names.length];
-      const look = defaultLook(bname); // aparência variada, sempre a mesma para o mesmo codinome
+      // aparência variada, sempre a mesma para o mesmo codinome; metade usa capacete ou máscara
+      const look = defaultLook(bname);
+      const hk = [...bname].reduce((a, ch) => a + ch.charCodeAt(0), 0);
+      if (hk % 2) { look.head = ['tatico', 'classico', 'tatico', 'antidist', 'fleece'][hk % 5]; look.face = look.head === 'tatico' ? ['none', 'balaclava', 'tela'][hk % 3] : 'none'; look.gear = ['g1', 'g2', 'g3', 'g4', 'g5'][(hk >> 1) % 5]; }
       const bot = new Bot({ id: i + 1, name: bname, team, color, look }, this.config.difficulty);
       bot.look = look;
       bot.setLoadout(weightedPrimary(), pick(SECONDARY_IDS), mode === 'training', pick(MELEE_IDS));

@@ -51,6 +51,30 @@ export const CAMOS = [
   { id: 'noturno', name: 'Noturno', kind: 'blobs', colors: ['#1c2430', '#0e1218', '#2e3a4c', '#3b4656'] },
 ];
 
+// Equipamento de cabeça e rosto (só visual; não protege). Todos livres desde o início.
+export const HEADGEAR = [
+  { id: 'none', name: 'Nenhum' },
+  { id: 'tatico', name: 'Capacete tático' },
+  { id: 'antidist', name: 'Capacete antidistúrbio' },
+  { id: 'classico', name: 'Capacete clássico' },
+  { id: 'fleece', name: 'Capuz de fleece' },
+];
+export const FACEGEAR = [
+  { id: 'none', name: 'Nenhum' },
+  { id: 'balaclava', name: 'Balaclava' },
+  { id: 'tela', name: 'Máscara de tela' },
+  { id: 'gas', name: 'Máscara de gás' },
+];
+export const GEAR_COLORS = [
+  { id: 'g1', name: 'Preto', hex: 0x18191c },
+  { id: 'g2', name: 'Azul-marinho', hex: 0x1e2b45 },
+  { id: 'g3', name: 'Cinza', hex: 0x4c4f54 },
+  { id: 'g4', name: 'Verde-oliva', hex: 0x4a5232 },
+  { id: 'g5', name: 'Areia', hex: 0xa89874 },
+];
+// combinações que não encaixam: o capuz e o capacete antidistúrbio não comportam a máscara de gás
+export const gearConflict = (head, face) => face === 'gas' && (head === 'fleece' || head === 'antidist');
+
 const pickId = (list, id, fallback) => (list.some((o) => o.id === id) ? id : fallback);
 const byId = (list, id) => list.find((o) => o.id === id) || list[0];
 
@@ -64,7 +88,7 @@ function hash(str) {
 export function defaultLook(name) {
   const r = mulberry32(hash(name || 'Jogador'));
   const pick = (list) => list[Math.floor(r() * list.length)].id;
-  return { skin: pick(SKINS), eyes: pick(EYES.slice(0, 4)), hair: pick(HAIRS), hairColor: pick(HAIR_COLORS.slice(0, 4)), camo: 'mata' };
+  return { skin: pick(SKINS), eyes: pick(EYES.slice(0, 4)), hair: pick(HAIRS), hairColor: pick(HAIR_COLORS.slice(0, 4)), camo: 'mata', head: 'none', face: 'none', gear: 'g1', swat: false };
 }
 
 // Valida dados de aparência (inclusive os recebidos pela rede).
@@ -74,6 +98,8 @@ export function sanitizeLook(look, name = '') {
   return {
     skin: pickId(SKINS, l.skin, d.skin), eyes: pickId(EYES, l.eyes, d.eyes), hair: pickId(HAIRS, l.hair, d.hair),
     hairColor: pickId(HAIR_COLORS, l.hairColor, d.hairColor), camo: pickId(CAMOS, l.camo, d.camo),
+    head: pickId(HEADGEAR, l.head, 'none'), face: gearConflict(l.head, l.face) ? 'none' : pickId(FACEGEAR, l.face, 'none'),
+    gear: pickId(GEAR_COLORS, l.gear, 'g1'), swat: l.swat === true,
   };
 }
 
@@ -132,6 +158,7 @@ export function migrateProfiles() {
 
 export const lookColors = (look) => ({
   skin: byId(SKINS, look.skin).hex, eyes: byId(EYES, look.eyes).hex, hair: byId(HAIR_COLORS, look.hairColor).hex,
+  gear: byId(GEAR_COLORS, look.gear || 'g1').hex,
 });
 
 // ---------- camuflagens (texturas geradas por código) ----------

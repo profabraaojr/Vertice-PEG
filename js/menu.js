@@ -7,7 +7,7 @@ import { pwa, isStandalone, platform, promptInstall } from './pwa.js';
 import { CAMPAIGN, missionById, storyProgress } from './story.js';
 import { isTouchDevice } from './touch.js';
 import { trainingBest } from './training.js';
-import { SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, getLook, defaultLook, sanitizeLook, activeProfile, camoCanvas, cleanNickname, nicknameProblem, saveProfile, deleteProfile } from './profiles.js';
+import { SKINS, EYES, HAIRS, HAIR_COLORS, CAMOS, HEADGEAR, FACEGEAR, GEAR_COLORS, gearConflict, getLook, defaultLook, sanitizeLook, activeProfile, camoCanvas, cleanNickname, nicknameProblem, saveProfile, deleteProfile } from './profiles.js';
 import { SCHOOL, CLASSES } from './homage.js';
 
 const $ = (id) => document.getElementById(id);
@@ -414,9 +414,24 @@ export class Menu {
       b.addEventListener('click', () => this.pfSet({ camo: o.id }));
       $('pf-camo').appendChild(b);
     });
+    // equipamento de cabeça e rosto, cor e sigla
+    const chips = (box, list, key) => list.forEach((o) => {
+      const b = document.createElement('button');
+      b.textContent = o.name;
+      b.dataset.v = o.id;
+      b.addEventListener('click', () => { if (!b.disabled) this.pfSet({ [key]: o.id }); });
+      box.appendChild(b);
+    });
+    chips($('pf-head'), HEADGEAR, 'head');
+    chips($('pf-facegear'), FACEGEAR, 'face');
+    swatches($('pf-gear'), GEAR_COLORS, 'gear');
+    $('pf-swat').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => this.pfSet({ swat: b.dataset.v === '1' })));
     $('pf-random').addEventListener('click', () => {
       const r = (list) => list[Math.floor(Math.random() * list.length)].id;
-      this.pfSet({ skin: r(SKINS), eyes: r(EYES), hair: r(HAIRS), hairColor: r(HAIR_COLORS), camo: r(CAMOS) });
+      const head = Math.random() < 0.5 ? 'none' : r(HEADGEAR);
+      let face = Math.random() < 0.6 ? 'none' : r(FACEGEAR);
+      if (gearConflict(head, face)) face = 'none';
+      this.pfSet({ skin: r(SKINS), eyes: r(EYES), hair: r(HAIRS), hairColor: r(HAIR_COLORS), camo: r(CAMOS), head, face, gear: r(GEAR_COLORS) });
     });
     const nick = $('pf-nick');
     nick.addEventListener('input', () => { this.pfDraftName = nick.value; this.renderProfiles(false); });
@@ -469,6 +484,13 @@ export class Menu {
     const problem = this.pfDraftName ? nicknameProblem(this.pfDraftName) : '';
     const mark = (id, v) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.v === v));
     mark('pf-skin', look.skin); mark('pf-eyes', look.eyes); mark('pf-hair', look.hair); mark('pf-haircolor', look.hairColor); mark('pf-camo', look.camo);
+    mark('pf-head', look.head); mark('pf-facegear', look.face); mark('pf-gear', look.gear); mark('pf-swat', look.swat ? '1' : '0');
+    // combinações que não encaixam ficam indisponíveis
+    $('pf-facegear').querySelectorAll('button').forEach((b) => { b.disabled = gearConflict(look.head, b.dataset.v); b.title = b.disabled ? 'Não encaixa com o equipamento de cabeça escolhido' : ''; });
+    $('pf-head').querySelectorAll('button').forEach((b) => { b.disabled = gearConflict(b.dataset.v, look.face); b.title = b.disabled ? 'Não encaixa com a máscara de gás' : ''; });
+    // cabelo escondido sob capacete, capuz ou balaclava
+    const hidden = look.head !== 'none' || look.face === 'balaclava';
+    $('pf-hair').closest('.pf-row').classList.toggle('dim', hidden);
     $('pf-name').textContent = name || 'Seu apelido';
     const msg = $('pf-nick-msg');
     msg.textContent = problem || 'De 2 a 16 caracteres. Aparece para os outros jogadores e no ranking; evite usar o nome completo.';
