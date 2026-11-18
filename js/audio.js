@@ -145,7 +145,7 @@ export class AudioEngine {
     if (p.tail) this.noiseBurst(dest, t + 0.02, p.tail, 'lowpass', 900, g * 0.18, 0.5, 200);
   }
 
-  // Minigun: zumbido do motor elétrico que sobe com a rotação (contínuo; level de 0 a 1).
+  // Metralhadora rotativa (Ciclone R6): zumbido do motor elétrico que sobe com a rotação (contínuo; level de 0 a 1).
   spin(level, hot = false) {
     if (!this.ctx) return;
     if (!this.spinNode) {

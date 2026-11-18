@@ -44,7 +44,7 @@ function rings(k, us, y, yRail, w = 0.03) {
 export function buildRifle(md, k, out, sub, M) {
   const { gunmetal, steelDark, polyDark, rubber, bore } = M;
   switch (md.type) {
-    // ============================================================ M82 .50 BMG
+    // ============================================================ Ferrão .50 (id 'm82')
     case 'm82': {
       const recv = mat('gunmetal', md.body);
       const dark = mat('polymer', 0x1b1c1e);
@@ -97,7 +97,7 @@ export function buildRifle(md, k, out, sub, M) {
       out.flashScale = 0.34;
       break;
     }
-    // ============================================================ SVD-63
+    // ============================================================ Estepe-63 (id 'svd')
     case 'svd': {
       const wood = mat('wood', 0xc58a52);
       const steel = mat('steel', 0x2c2e31);
@@ -124,7 +124,7 @@ export function buildRifle(md, k, out, sub, M) {
       triggerGuard(k, -0.012, 0.06, -0.008, -0.048, steel, steelDark);
       // manopla de manejo à direita (semiautomática)
       out.slide = sub((s) => { s.cylX(0.006, 0.026, 0.032, 0.05, 0.11, steelDark); s.sphere(0.008, 0.046, 0.05, 0.11, steelDark); });
-      // luneta lateral estilo PSO (montada à esquerda), com para-sol e protetor de borracha
+      // luneta lateral de chevrons (montada à esquerda), com para-sol e protetor de borracha
       const px = -0.034, py = 0.112;
       k.box(0.016, 0.05, 0.12, -0.026, 0.07, 0.02, gunmetal, { b: 0.003 }); // trilho lateral e base
       k.box(0.022, 0.034, 0.05, px, 0.09, 0.03, gunmetal, { b: 0.004 });

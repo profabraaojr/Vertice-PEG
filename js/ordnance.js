@@ -4,7 +4,7 @@
 //   quem disparou muito perto). O anfitrião (ou o jogo local) resolve o dano; os convidados só
 //   veem o foguete e a explosão;
 // - pontos de coleta nas partidas (equipe e mata-mata): a foto do professor, em local sorteado,
-//   entrega a Minigun M134; uma caixa de armamento, em outro local, entrega a bazuca. Uma pessoa
+//   entrega a metralhadora rotativa Ciclone R6; uma caixa de armamento, em outro local, entrega a bazuca. Uma pessoa
 //   por vez fica com cada arma; quando ela cai, o ponto reaparece em outro lugar.
 import * as THREE from 'three';
 import { WEAPONS } from './config.js';
@@ -241,7 +241,7 @@ function buildPhoto() {
   const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.26), new THREE.MeshStandardMaterial({ map: pt, emissive: 0xffffff, emissiveMap: pt, emissiveIntensity: 0.22, roughness: 0.6 }));
   plaque.position.set(0, 1.18, 0.09);
   g.add(plaque);
-  // halo dourado pulsante e ícone da minigun (indicam que a foto pode ser pega)
+  // halo dourado pulsante (indicam que a foto pode ser pega)
   const halo = new THREE.Mesh(new THREE.RingGeometry(0.95, 1.08, 40), new THREE.MeshBasicMaterial({ color: 0xffc04a, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
   halo.position.set(0, 2.0, 0.12);
   g.add(halo);
@@ -282,7 +282,7 @@ function buildCrate() {
 }
 
 const KINDS = {
-  photo: { weapon: 'm134', label: 'Minigun M134', verb: 'Pegar a Minigun M134 (foto do professor)', respawn: 8 },
+  photo: { weapon: 'm134', label: 'Ciclone R6', verb: 'Pegar a Ciclone R6 (foto do professor)', respawn: 8 },
   crate: { weapon: 'rpg', label: 'Bazuca', verb: 'Pegar a bazuca (caixa de armamento)', respawn: 8 },
 };
 
@@ -387,10 +387,10 @@ export class HeavyPickups {
     this.give(c, it.info.weapon);
     c.heavy = { kind, weapon: it.info.weapon };
     if (c.isRemote) g.net.sendTo(c.peerId, { t: 'heavy', w: it.info.weapon });
-    const msg = `${c.name} pegou ${kind === 'photo' ? 'a Minigun M134' : 'a bazuca'}`;
-    g.announce(c.isPlayer ? (kind === 'photo' ? 'MINIGUN M134' : 'BAZUCA') : msg, c.isPlayer ? 'Arma pesada carregada' : '', 2.2, '#ffc04a');
+    const msg = `${c.name} pegou ${kind === 'photo' ? 'a Ciclone R6' : 'a bazuca'}`;
+    g.announce(c.isPlayer ? (kind === 'photo' ? 'CICLONE R6' : 'BAZUCA') : msg, c.isPlayer ? 'Arma pesada carregada' : '', 2.2, '#ffc04a');
     if (g.isHost) for (const o of g.combatants) if (o.isRemote && o !== c) g.net.sendTo(o.peerId, { t: 'ann', title: msg, sub: '', dur: 2.2, color: '#ffc04a' });
-    if (g.isHost && c.isRemote) g.net.sendTo(c.peerId, { t: 'ann', title: kind === 'photo' ? 'MINIGUN M134' : 'BAZUCA', sub: 'Arma pesada carregada', dur: 2.2, color: '#ffc04a' });
+    if (g.isHost && c.isRemote) g.net.sendTo(c.peerId, { t: 'ann', title: kind === 'photo' ? 'CICLONE R6' : 'BAZUCA', sub: 'Arma pesada carregada', dur: 2.2, color: '#ffc04a' });
     return true;
   }
 

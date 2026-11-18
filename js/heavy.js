@@ -1,5 +1,5 @@
 // Armas pesadas modeladas por código com o mesmo kit das demais (u = para a frente, y = para
-// cima, origem no topo do punho): Minigun M134 de seis canos e bazuca (lança-foguetes).
+// cima, origem no topo do punho): metralhadora rotativa Ciclone R6, de seis canos, e bazuca (lança-foguetes).
 // Partes animadas: out.spinner (feixe de canos que gira) e out.rocket (ogiva visível quando carregada).
 import * as THREE from 'three';
 import { gunMat as mat, triggerGuard } from './guns.js';
@@ -11,7 +11,7 @@ const AXIS_Y = 0.035; // eixo do feixe de canos da minigun
 export function buildHeavy(md, k, out, sub, M) {
   const { steelDark, polyDark, rubber, bore } = M;
   switch (md.type) {
-    // ============================================================ Minigun M134
+    // ============================================================ Ciclone R6 (id 'm134', modelo 'minigun')
     case 'minigun': {
       const body = mat('gunmetal', md.body);
       const od = mat('polymer', md.accent);

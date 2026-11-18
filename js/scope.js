@@ -1,13 +1,13 @@
 // Visão telescópica: ocular com sombra de borda, retículo de precisão e transição suave.
 //
-// Como nas lunetas táticas de segundo plano focal (por exemplo, a usada no M82), o retículo é
+// Como nas lunetas táticas de segundo plano focal (por exemplo, a do Ferrão .50), o retículo é
 // calibrado na ampliação máxima: nela, 1 mil (milirradiano) na tela corresponde exatamente a
 // 1 mil no mundo, e os pontos servem para compensar a queda do projétil e o desvio do vento.
 // O retículo mantém o mesmo tamanho em qualquer ampliação e fica sempre no centro da tela;
 // só a sombra da ocular acompanha levemente o movimento.
 
 const RETICLES = {
-  // mil-dot: padrão das lunetas táticas usadas no M82 e em rifles de longo alcance
+  // mil-dot: padrão das lunetas táticas de rifles de longo alcance (Longinus e Ferrão .50)
   mildot(ctx, cx, cy, mil, R, ink) {
     const thin = Math.max(1.2, mil * 0.04);
     const post = Math.max(3.5, mil * 0.34);
@@ -30,7 +30,7 @@ const RETICLES = {
       }
     }
   },
-  // PSO (SVD): chevron principal, três chevrons de correção, escala de deriva e curva de distância
+  // chevrons (Estepe-63; id interno 'pso'): chevron principal, três chevrons de correção, escala de deriva e curva de distância
   pso(ctx, cx, cy, mil, R, ink) {
     const lw = Math.max(1.8, mil * 0.08);
     ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = lw; ctx.lineJoin = 'miter';

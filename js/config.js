@@ -117,7 +117,7 @@ export const WEAPONS = {
     desc: 'Ferrolho com luneta de dois níveis. Elimina com um disparo no tronco.',
   },
   m82: {
-    id: 'm82', name: 'M82 .50 BMG', category: 'Rifle de precisão semiautomático', slot: 'primary',
+    id: 'm82', name: 'Ferrão .50', category: 'Rifle de precisão semiautomático', slot: 'primary',
     damage: 165, headMult: 2.2, legMult: 0.85, rpm: 70, auto: false, pellets: 1,
     mag: 10, reserve: 30, reload: 4.2, pierce: 2,
     spread: 0.11, scopedSpread: 0.0005, moveSpread: 0.16, airSpread: 0.3, crouchMult: 0.75, adsMult: 1,
@@ -129,10 +129,10 @@ export const WEAPONS = {
     sound: { freq: 360, low: 42, decay: 0.55, gain: 1.45, tail: 1.6 },
     model: { type: 'm82', body: 0x2c2f33, accent: 0x1b1c1e },
     bot: { pref: 45 },
-    desc: 'Semiautomático de grande calibre, inspirado no Barrett M82. Pesado e de recuo forte; o projétil atravessa dois alvos e chega longe com pouca queda.',
+    desc: 'Semiautomático de grande calibre (.50), com freio de boca e bipé. Pesado e de recuo forte; o projétil atravessa dois alvos e chega longe com pouca queda.',
   },
   svd: {
-    id: 'svd', name: 'SVD-63', category: 'Rifle de precisão semiautomático', slot: 'primary',
+    id: 'svd', name: 'Estepe-63', category: 'Rifle de precisão semiautomático', slot: 'primary',
     damage: 92, headMult: 2.4, legMult: 0.8, rpm: 140, auto: false, pellets: 1,
     mag: 10, reserve: 40, reload: 2.8,
     spread: 0.06, scopedSpread: 0.0012, moveSpread: 0.09, airSpread: 0.2, crouchMult: 0.8, adsMult: 1,
@@ -140,11 +140,11 @@ export const WEAPONS = {
     recoil: 3.4, recoilH: 0.7, recoilRecover: 9,
     range: 160, minFalloff: 0.9, speed: 0.86, zoom: [22, 5.5], reticle: 'pso', action: 'semi',
     ballistic: { v: 830, c: 0.0013 }, zero: 300,
-    caliber: '7,62 × 54 mm R', optic: 'Luneta tipo PSO 4–15× · retículo de chevrons', rangeText: '50 a 600 m',
+    caliber: '7,62 × 54 mm R', optic: 'Luneta de chevrons 4–15× (montada à esquerda)', rangeText: '50 a 600 m',
     sound: { freq: 620, low: 80, decay: 0.3, gain: 1.1, tail: 0.75 },
     model: { type: 'svd', body: 0x2c2e31, accent: 0xc58a52 },
     bot: { pref: 30 },
-    desc: 'Semiautomático leve, inspirado no Dragunov SVD: disparos rápidos, recuo moderado e boa mobilidade. Precisa de dois acertos no tronco.',
+    desc: 'Semiautomático leve, de coronha vazada e luneta lateral: disparos rápidos, recuo moderado e boa mobilidade. Precisa de dois acertos no tronco.',
   },
   spectre: {
     id: 'spectre', name: 'Espectro .338 LM', category: 'Rifle de precisão', slot: 'primary',
@@ -190,9 +190,9 @@ export const WEAPONS = {
     desc: 'Escopeta de bombeamento. Devastadora em corredores, inútil a distância.',
   },
   // armas pesadas (restritas): só no modo história, no treino e, nas partidas, pela foto do
-  // professor (minigun) ou pela caixa de armamento (bazuca) — ver js/ordnance.js
+  // professor (Ciclone R6) ou pela caixa de armamento (bazuca) — ver js/ordnance.js
   m134: {
-    id: 'm134', name: 'Minigun M134', caliber: '7,62 × 51 mm', optic: 'Sem mira óptica', rangeText: '5 a 50 m', category: 'Metralhadora rotativa · restrita', slot: 'primary', heavy: true,
+    id: 'm134', name: 'Ciclone R6', caliber: '7,62 × 51 mm', optic: 'Sem mira óptica', rangeText: '5 a 50 m', category: 'Metralhadora rotativa de seis canos · restrita', slot: 'primary', heavy: true,
     damage: 15, headMult: 2.2, legMult: 0.8, rpm: 1500, auto: true, pellets: 1,
     mag: 300, reserve: 300, reload: 5.2,
     spread: 0.022, moveSpread: 0.03, airSpread: 0.12, crouchMult: 0.8, adsMult: 0.85,
